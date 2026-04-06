@@ -78,6 +78,7 @@ def ai_price(message):
         "• Own Acc (5 Inv)  ➔  20,000 Ks\n\n"
         "🔍 Perplexity Pro AI (1 Month) ➔  8,000 Ks\n"
         "🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks"
+        "❌Chat GPT မရသေးပါ"
     )
     bot.reply_to(message, msg, parse_mode="Markdown")
 
