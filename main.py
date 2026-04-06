@@ -1,6 +1,7 @@
 import telebot
 from flask import Flask, request
 import os
+import re
 
 # --- Bot Configuration ---
 TOKEN = "8688726016:AAG7AqgFbRMPHO4w_MsOQeeqmhbE4c_TLnc"
@@ -9,6 +10,7 @@ ADMIN_ID = 1847021130
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
+# User တစ်ခါစာပို့ပြီးရင် မှတ်ထားရန် စာရင်း (Restart ချတိုင်း အသစ်ပြန်ဖြစ်မည်)
 notified_users = set()
 MAINTENANCE_MODE = False
 
@@ -155,7 +157,7 @@ def admin_and_channel(message):
     )
     bot.reply_to(message, text, parse_mode="Markdown")
 
-# --- Forward & Reply System (ဒီအပိုင်းကို သေချာပြန်ပြင်ပေးထားပါတယ်) ---
+# --- Forward & Reply System (အမှားအယွင်းမရှိစေရန် အထူးပြင်ဆင်ထားသည်) ---
 
 @bot.message_handler(func=lambda message: True)
 def handle_all(message):
@@ -167,16 +169,17 @@ def handle_all(message):
         c_name = message.from_user.first_name
         c_user = f"@{message.from_user.username}" if message.from_user.username else "No Username"
         
-        # ID ကို Backtick ( ` ) ဖြင့် အုပ်ထားမှ Admin က Reply ပြန်လို့ရမှာပါ
+        # Admin ဆီသို့ ပို့မည့် Format
         admin_msg = (
             f"📩 **Message အသစ်!**\n"
             f"👤 နာမည်: {c_name}\n"
             f"🔗 Username: {c_user}\n"
-            f"🆔 ID: `{message.chat.id}`\n"
+            f"🆔 ID: {message.chat.id}\n"
             f"📝 စာသား: {message.text}"
         )
         bot.send_message(ADMIN_ID, admin_msg, parse_mode="Markdown")
         
+        # User ကို "ပို့ပြီးပါပြီ" ဆိုတဲ့စာ တစ်ကြိမ်သာ ပြပေးမည့်စနစ်
         if message.chat.id not in notified_users:
             bot.reply_to(message, "✅ လူကြီးမင်း၏စာကို Admin ထံ ပေးပို့လိုက်ပါပြီ။")
             notified_users.add(message.chat.id)
@@ -184,15 +187,17 @@ def handle_all(message):
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
             reply_text = message.reply_to_message.text
-            # စာသားထဲမှ ID ကို Backtick များကြားမှ အတိအကျ ဆွဲထုတ်ခြင်း
-            if "🆔 ID: `" in reply_text:
-                target_id = int(reply_text.split("🆔 ID: `")[1].split("`")[0])
+            # Regex ဖြင့် ID ကို အမှားအယွင်းမရှိ ရှာဖွေခြင်း
+            found_ids = re.findall(r"ID: (\d+)", reply_text)
+            
+            if found_ids:
+                target_id = int(found_ids[0])
                 bot.send_message(target_id, f"👨‍💻 **Admin မှ ပြန်ကြားစာ:**\n\n{message.text}")
                 bot.send_message(ADMIN_ID, "✅ ပြန်စာပို့ပြီးပါပြီ။")
             else:
-                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသော Bot စာကို Reply ထောက်ပေးပါ။")
+                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ Bot မှ ပို့ထားသော ID ပါသည့်စာကို Reply ထောက်ပေးပါ။")
         except Exception as e:
-            bot.send_message(ADMIN_ID, f"❌ Error: {e}")
+            bot.send_message(ADMIN_ID, f"❌ Error: {str(e)}")
 
 # --- Render Webhook Setup ---
 
