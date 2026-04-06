@@ -34,7 +34,7 @@ def start(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- Services Handlers ---
+# --- Services Handlers (ဈေးနှုန်းများ) ---
 
 @bot.message_handler(func=lambda m: m.text == "💎 Telegram Premium")
 def tg_price(message):
@@ -155,7 +155,7 @@ def admin_and_channel(message):
     )
     bot.reply_to(message, text, parse_mode="Markdown")
 
-# --- Forward & Reply System (CRITICAL SECTION) ---
+# --- Forward & Reply System (ဒီအပိုင်းကို သေချာပြန်ပြင်ပေးထားပါတယ်) ---
 
 @bot.message_handler(func=lambda message: True)
 def handle_all(message):
@@ -167,7 +167,7 @@ def handle_all(message):
         c_name = message.from_user.first_name
         c_user = f"@{message.from_user.username}" if message.from_user.username else "No Username"
         
-        # ID ကို Backtick ( ` ) ဖြင့် အုပ်ထားမှ ပြန်စာစနစ် အလုပ်လုပ်ပါမည်
+        # ID ကို Backtick ( ` ) ဖြင့် အုပ်ထားမှ Admin က Reply ပြန်လို့ရမှာပါ
         admin_msg = (
             f"📩 **Message အသစ်!**\n"
             f"👤 နာမည်: {c_name}\n"
@@ -184,13 +184,13 @@ def handle_all(message):
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
             reply_text = message.reply_to_message.text
-            # စာသားထဲမှ ID ကို Backtick များကြားမှ ဆွဲထုတ်ခြင်း
+            # စာသားထဲမှ ID ကို Backtick များကြားမှ အတိအကျ ဆွဲထုတ်ခြင်း
             if "🆔 ID: `" in reply_text:
                 target_id = int(reply_text.split("🆔 ID: `")[1].split("`")[0])
                 bot.send_message(target_id, f"👨‍💻 **Admin မှ ပြန်ကြားစာ:**\n\n{message.text}")
                 bot.send_message(ADMIN_ID, "✅ ပြန်စာပို့ပြီးပါပြီ။")
             else:
-                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပေးပါ။")
+                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသော Bot စာကို Reply ထောက်ပေးပါ။")
         except Exception as e:
             bot.send_message(ADMIN_ID, f"❌ Error: {e}")
 
