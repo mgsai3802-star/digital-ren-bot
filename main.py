@@ -77,7 +77,7 @@ def ai_price(message):
         "• Invite to mail     ➔  10,000 Ks\n"
         "• Own Acc (5 Inv)  ➔  20,000 Ks\n\n"
         "🔍 Perplexity Pro AI (1 Month) ➔  8,000 Ks\n"
-        "🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks"
+        "🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks\n"
         "❌Chat GPT မရသေးပါ"
     )
     bot.reply_to(message, msg, parse_mode="Markdown")
@@ -158,7 +158,7 @@ def admin_and_channel(message):
     )
     bot.reply_to(message, text, parse_mode="Markdown")
 
-# --- Forward & Reply System (အမှားအယွင်းမရှိစေရန် အထူးပြင်ဆင်ထားသည်) ---
+# --- Forward & Reply System ---
 
 @bot.message_handler(func=lambda message: True)
 def handle_all(message):
@@ -170,7 +170,7 @@ def handle_all(message):
         c_name = message.from_user.first_name
         c_user = f"@{message.from_user.username}" if message.from_user.username else "No Username"
         
-        # Admin ဆီသို့ ပို့မည့် Format
+        # Admin ဆီသို့ ပို့မည့် Format (ID ကို ရှင်းရှင်းလင်းလင်း ထည့်ထားသည်)
         admin_msg = (
             f"📩 **Message အသစ်!**\n"
             f"👤 နာမည်: {c_name}\n"
@@ -180,7 +180,6 @@ def handle_all(message):
         )
         bot.send_message(ADMIN_ID, admin_msg, parse_mode="Markdown")
         
-        # User ကို "ပို့ပြီးပါပြီ" ဆိုတဲ့စာ တစ်ကြိမ်သာ ပြပေးမည့်စနစ်
         if message.chat.id not in notified_users:
             bot.reply_to(message, "✅ လူကြီးမင်း၏စာကို Admin ထံ ပေးပို့လိုက်ပါပြီ။")
             notified_users.add(message.chat.id)
@@ -196,7 +195,7 @@ def handle_all(message):
                 bot.send_message(target_id, f"👨‍💻 **Admin မှ ပြန်ကြားစာ:**\n\n{message.text}")
                 bot.send_message(ADMIN_ID, "✅ ပြန်စာပို့ပြီးပါပြီ။")
             else:
-                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ Bot မှ ပို့ထားသော ID ပါသည့်စာကို Reply ထောက်ပေးပါ။")
+                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသော Bot စာကို Reply ထောက်ပေးပါ။")
         except Exception as e:
             bot.send_message(ADMIN_ID, f"❌ Error: {str(e)}")
 
@@ -214,6 +213,9 @@ def getMessage():
 @app.route("/")
 def webhook():
     bot.remove_webhook()
+    # Webhook ချိတ်တဲ့နေရာမှာ ပိုသေချာအောင် sleep ခဏထည့်ထားပါတယ်
+    import time
+    time.sleep(1)
     host_url = request.url_root.replace("http://", "https://")
     bot.set_webhook(url=host_url + TOKEN)
     return "✅ Ren Digital Bot is Ready!"
@@ -221,4 +223,3 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
-    
