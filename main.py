@@ -12,10 +12,10 @@ ADMIN_ID = 1847021130
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Render Port Keep-alive (Port Scan Error မတက်စေရန်)
+# Render Port Keep-alive
 @app.route('/')
 def index():
-    return "✅ Ren Digital Bot is Running with All Features!"
+    return "✅ Ren Digital Bot is Running with Auto-Save ID!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -52,24 +52,17 @@ def main_menu():
 
 # --- Admin Commands ---
 
-# User List ကြည့်ရန် (Admin သာ သုံးနိုင်သည်)
 @bot.message_handler(commands=['userlist'])
 def show_user_list(message):
     if message.chat.id == ADMIN_ID:
         if not os.path.exists(USER_DB):
             bot.reply_to(message, "❌ User စာရင်း မရှိသေးပါ။")
             return
-        
         with open(USER_DB, "r") as f:
             users = f.read().splitlines()
-        
-        if not users:
-            bot.reply_to(message, "❌ User တစ်ယောက်မှ မရှိသေးပါ။")
-        else:
-            user_str = "\n".join(users)
-            bot.reply_to(message, f"👥 **လက်ရှိ User စာရင်း ({len(users)} ယောက်):**\n\n`{user_str}`", parse_mode="Markdown")
+        user_str = "\n".join(users) if users else "မရှိသေးပါ"
+        bot.reply_to(message, f"👥 **လက်ရှိ User စာရင်း ({len(users)} ယောက်):**\n\n`{user_str}`", parse_mode="Markdown")
 
-# Broadcast စနစ် (Admin သာ သုံးနိုင်သည်)
 @bot.message_handler(commands=['broadcast'])
 def broadcast(message):
     if message.chat.id == ADMIN_ID:
@@ -77,25 +70,18 @@ def broadcast(message):
         if not msg_text:
             bot.reply_to(message, "❌ ပို့မည့်စာသား ထည့်ပေးပါ (ဥပမာ- `/broadcast မင်္ဂလာပါ`)")
             return
-        
-        if not os.path.exists(USER_DB):
-            bot.reply_to(message, "❌ User စာရင်း မရှိသေးပါ။")
-            return
-
         with open(USER_DB, "r") as f:
             users = f.read().splitlines()
-
+        
         count = 0
         bot.send_message(ADMIN_ID, f"📢 လူပေါင်း {len(users)} ယောက်ကို စာပို့နေပါပြီ...")
-        
         for user_id in users:
             try:
                 bot.send_message(user_id, f"📢 **Ren Digital Service မှ အကြောင်းကြားစာ**\n\n{msg_text}", parse_mode="Markdown")
                 count += 1
-                time.sleep(0.05) 
+                time.sleep(0.05)
             except: pass
-        
-        bot.send_message(ADMIN_ID, f"✅ စုစုပေါင်း {count} ယောက်ဆီ စာပို့ပြီးပါပြီ။")
+        bot.send_message(ADMIN_ID, f"✅ စုစုပေါင်း {count} ယောက်ဆီ ပို့ပြီးပါပြီ။")
 
 # --- Start Command ---
 @bot.message_handler(commands=['start'])
@@ -109,10 +95,11 @@ def start(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- Services Handlers (Pricing) ---
+# --- Services Handlers (Menu နှိပ်လျှင်လည်း ID သိမ်းပေးရန် save_user ထည့်ထားသည်) ---
 
 @bot.message_handler(func=lambda m: m.text == "💎 Telegram Premium")
 def tg_price(message):
+    save_user(message.chat.id)
     msg = (
         "💎 **Telegram Premium Pricing**\n"
         "━━━━━━━━━━━━━━━━━━\n"
@@ -126,6 +113,7 @@ def tg_price(message):
 
 @bot.message_handler(func=lambda m: m.text == "🌐 VPN ဝန်ဆောင်မှု")
 def vpn_price(message):
+    save_user(message.chat.id)
     msg = (
         "🌐 **VPN Service Pricing**\n"
         "━━━━━━━━━━━━━━━━━━\n"
@@ -140,6 +128,7 @@ def vpn_price(message):
 
 @bot.message_handler(func=lambda m: m.text == "🤖 AI Premium Tools")
 def ai_price(message):
+    save_user(message.chat.id)
     msg = (
         "🤖 **AI Premium Tools**\n"
         "━━━━━━━━━━━━━━━━━━\n"
@@ -157,6 +146,7 @@ def ai_price(message):
 
 @bot.message_handler(func=lambda m: m.text == "🎬 Music & Entertainment")
 def music_price(message):
+    save_user(message.chat.id)
     msg = (
         "🎬 **Music & Entertainment**\n"
         "━━━━━━━━━━━━━━━━━━\n"
@@ -174,6 +164,7 @@ def music_price(message):
 
 @bot.message_handler(func=lambda m: m.text == "🎬 CapCut Pro Premium")
 def capcut_price(message):
+    save_user(message.chat.id)
     msg = (
         "🎬 **CapCut Pro Premium**\n"
         "━━━━━━━━━━━━━━━━━━\n"
@@ -194,6 +185,7 @@ def capcut_price(message):
 
 @bot.message_handler(func=lambda m: m.text == "🌟 အခြားပရီမီယံများ")
 def other_price(message):
+    save_user(message.chat.id)
     msg = (
         "🌟 **Other Premium Services**\n"
         "━━━━━━━━━━━━━━━━━━\n"
@@ -207,6 +199,7 @@ def other_price(message):
 
 @bot.message_handler(func=lambda m: m.text == "🛡️ Hotspot Shield Free")
 def hotspot_price(message):
+    save_user(message.chat.id)
     msg = (
         "🛡️ **Hotspot Shield VPN (7 Days Free)**\n"
         "━━━━━━━━━━━━━━━━━━\n"
@@ -223,6 +216,7 @@ def hotspot_price(message):
 
 @bot.message_handler(func=lambda m: m.text == "👨‍💻 Admin နှင့် စကားပြောရန် သို့မဟုတ် Channel Join ရန်")
 def admin_and_channel(message):
+    save_user(message.chat.id)
     text = (
         "👨‍💻 **Admin နှင့် ဆက်သွယ်ရန်**\n"
         "Admin (@Ren2512) ထံ တိုက်ရိုက်ဆက်သွယ်နိုင်သလို ဤ Bot ထဲတွင်လည်း စာရေးသားပေးပို့နိုင်ပါသည်။\n\n"
@@ -231,7 +225,7 @@ def admin_and_channel(message):
     )
     bot.reply_to(message, text, parse_mode="Markdown")
 
-# --- Forward & Reply System (Media Support) ---
+# --- Forward & Reply System ---
 
 @bot.message_handler(content_types=['text', 'photo', 'document'])
 def handle_all_messages(message):
@@ -241,9 +235,7 @@ def handle_all_messages(message):
             bot.reply_to(message, "🛠 Bot ကို ပြုပြင်နေပါသည်။")
             return
         
-        c_name = message.from_user.first_name
-        info_header = f"📩 **Message အသစ်!**\n👤 နာမည်: {c_name}\n🆔 ID: {message.chat.id}"
-
+        info_header = f"📩 **Message အသစ်!**\n👤 နာမည်: {message.from_user.first_name}\n🆔 ID: {message.chat.id}"
         if message.content_type == 'text':
             bot.send_message(ADMIN_ID, f"{info_header}\n📝 စာသား: {message.text}")
         elif message.content_type == 'photo':
@@ -259,14 +251,12 @@ def handle_all_messages(message):
         try:
             target_text = message.reply_to_message.caption if message.reply_to_message.caption else message.reply_to_message.text
             target_id = int(re.findall(r"ID: (\d+)", target_text)[0])
-            
             if message.content_type == 'text':
                 bot.send_message(target_id, f"👨‍💻 **Admin ပြန်စာ:**\n\n{message.text}")
             elif message.content_type == 'photo':
                 bot.send_photo(target_id, message.photo[-1].file_id, caption=f"👨‍💻 **Admin ပုံပို့လိုက်သည်:**\n\n{message.caption if message.caption else ''}")
             elif message.content_type == 'document':
                 bot.send_document(target_id, message.document.file_id, caption=f"👨‍💻 **Admin ဖိုင်ပို့လိုက်သည်:**\n\n{message.caption if message.caption else ''}")
-            
             bot.send_message(ADMIN_ID, "✅ ပို့ပြီးပါပြီ။")
         except:
             bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပါ။")
@@ -275,3 +265,4 @@ if __name__ == "__main__":
     Thread(target=run_flask).start()
     bot.remove_webhook()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    
