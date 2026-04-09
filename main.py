@@ -12,10 +12,10 @@ ADMIN_ID = 1847021130
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Render Port Keep-alive
+# Render Port Keep-alive (Port Scan Error မတက်စေရန်)
 @app.route('/')
 def index():
-    return "✅ Ren Digital Bot is Running with Broadcast System!"
+    return "✅ Ren Digital Bot is Running with All Features!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -51,6 +51,23 @@ def main_menu():
     return markup
 
 # --- Admin Commands ---
+
+# User List ကြည့်ရန် (Admin သာ သုံးနိုင်သည်)
+@bot.message_handler(commands=['userlist'])
+def show_user_list(message):
+    if message.chat.id == ADMIN_ID:
+        if not os.path.exists(USER_DB):
+            bot.reply_to(message, "❌ User စာရင်း မရှိသေးပါ။")
+            return
+        
+        with open(USER_DB, "r") as f:
+            users = f.read().splitlines()
+        
+        if not users:
+            bot.reply_to(message, "❌ User တစ်ယောက်မှ မရှိသေးပါ။")
+        else:
+            user_str = "\n".join(users)
+            bot.reply_to(message, f"👥 **လက်ရှိ User စာရင်း ({len(users)} ယောက်):**\n\n`{user_str}`", parse_mode="Markdown")
 
 # Broadcast စနစ် (Admin သာ သုံးနိုင်သည်)
 @bot.message_handler(commands=['broadcast'])
@@ -258,4 +275,3 @@ if __name__ == "__main__":
     Thread(target=run_flask).start()
     bot.remove_webhook()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
-    
