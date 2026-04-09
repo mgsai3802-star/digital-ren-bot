@@ -1,14 +1,13 @@
 import telebot
-from flask import Flask, request
 import os
 import re
+import time
 
 # --- Bot Configuration ---
 TOKEN = "8688726016:AAG7AqgFbRMPHO4w_MsOQeeqmhbE4c_TLnc"
 ADMIN_ID = 1847021130 
 
 bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
 
 # User တစ်ခါစာပို့ပြီးရင် မှတ်ထားရန် စာရင်း (Restart ချတိုင်း အသစ်ပြန်ဖြစ်မည်)
 notified_users = set()
@@ -138,11 +137,11 @@ def hotspot_price(message):
         "🛡️ **Hotspot Shield VPN (7 Days Free)**\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "📧 **Accounts List:**\n"
-        "• dren@gmail.com\n"
-        "• drena@gmail.com\n"
-        "• dren.a@gmail.com\n"
-        "• dre.na@gmail.com\n"
-        "• dr.ena@gmail.com\n\n"
+        "• `renv@gmail.com` \n"
+        "• `r.env@gmail.com` \n"
+        "• `re.nv@gmail.com` \n"
+        "• `ren.v@gmail.com` \n"
+        "• `re.n.v@gmail.com` \n\n"
         "🔑 **Password** ➔ `Saithet111@222` \n"
         "📌 (အကောင့်တစ်ခုကို 10 devices သုံးရ)"
     )
@@ -164,13 +163,12 @@ def admin_and_channel(message):
 def handle_all(message):
     if message.chat.id != ADMIN_ID:
         if MAINTENANCE_MODE:
-            bot.reply_to(message, "🛠 Bot ကို ပြုပြင်နေပါသည်။ @Ren2512 ထံ တိုက်ရိုက်စာပို့ပေးပါ။", parse_mode="Markdown")
+            bot.reply_to(message, "🛠 Bot ကို ပြုပြင်နေပါသည်။ @Ren2512 ထံ တိုက်ရိုက်စာပို့ပေးပါ။")
             return
         
         c_name = message.from_user.first_name
         c_user = f"@{message.from_user.username}" if message.from_user.username else "No Username"
         
-        # Admin ဆီသို့ ပို့မည့် Format (ID ကို ရှင်းရှင်းလင်းလင်း ထည့်ထားသည်)
         admin_msg = (
             f"📩 **Message အသစ်!**\n"
             f"👤 နာမည်: {c_name}\n"
@@ -187,7 +185,6 @@ def handle_all(message):
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
             reply_text = message.reply_to_message.text
-            # Regex ဖြင့် ID ကို အမှားအယွင်းမရှိ ရှာဖွေခြင်း
             found_ids = re.findall(r"ID: (\d+)", reply_text)
             
             if found_ids:
@@ -199,27 +196,9 @@ def handle_all(message):
         except Exception as e:
             bot.send_message(ADMIN_ID, f"❌ Error: {str(e)}")
 
-# --- Render Webhook Setup ---
-
-@app.route('/' + TOKEN, methods=['POST'])
-def getMessage():
-    if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])
-        return "!", 200
-    return "Forbidden", 403
-
-@app.route("/")
-def webhook():
-    bot.remove_webhook()
-    # Webhook ချိတ်တဲ့နေရာမှာ ပိုသေချာအောင် sleep ခဏထည့်ထားပါတယ်
-    import time
-    time.sleep(1)
-    host_url = request.url_root.replace("http://", "https://")
-    bot.set_webhook(url=host_url + TOKEN)
-    return "✅ Ren Digital Bot is Ready!"
+# --- Run Bot with Polling ---
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    print("🚀 Bot is starting with Long Polling...")
+    bot.remove_webhook()
+    bot.infinity_polling()
