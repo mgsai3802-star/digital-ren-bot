@@ -169,9 +169,9 @@ def admin_and_channel(message):
     )
     bot.reply_to(message, text, parse_mode="Markdown")
 
-# --- Forward & Reply System ---
+# --- Forward & Reply System (စာရော ပုံပါ ရအောင် ပြင်ထားသည်) ---
 
-@bot.message_handler(func=lambda message: True)
+@bot.message_handler(content_types=['text', 'photo'])
 def handle_all(message):
     if message.chat.id != ADMIN_ID:
         if MAINTENANCE_MODE:
@@ -181,27 +181,45 @@ def handle_all(message):
         c_name = message.from_user.first_name
         c_user = f"@{message.from_user.username}" if message.from_user.username else "No Username"
         
-        admin_msg = (
+        info_header = (
             f"📩 **Message အသစ်!**\n"
             f"👤 နာမည်: {c_name}\n"
             f"🔗 Username: {c_user}\n"
-            f"🆔 ID: {message.chat.id}\n"
-            f"📝 စာသား: {message.text}"
+            f"🆔 ID: {message.chat.id}"
         )
-        bot.send_message(ADMIN_ID, admin_msg, parse_mode="Markdown")
+
+        # Customer ဆီက စာသားလာရင်
+        if message.content_type == 'text':
+            admin_msg = f"{info_header}\n📝 စာသား: {message.text}"
+            bot.send_message(ADMIN_ID, admin_msg, parse_mode="Markdown")
+        
+        # Customer ဆီက ဓာတ်ပုံလာရင်
+        elif message.content_type == 'photo':
+            caption = f"{info_header}\n🖼️ (Customer ထံမှ ဓာတ်ပုံ ပေးပို့ချက်)"
+            bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=caption, parse_mode="Markdown")
         
         if message.chat.id not in notified_users:
-            bot.reply_to(message, "✅ လူကြီးမင်း၏စာကို Admin ထံ ပေးပို့လိုက်ပါပြီ။")
+            bot.reply_to(message, "✅ လူကြီးမင်း၏စာ (သို့မဟုတ် ဓာတ်ပုံ) ကို Admin ထံ ပေးပို့လိုက်ပါပြီ။")
             notified_users.add(message.chat.id)
             
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
-            reply_text = message.reply_to_message.text
-            found_ids = re.findall(r"ID: (\d+)", reply_text)
+            # Reply ထောက်ထားတဲ့ စာ (သို့မဟုတ် Caption) ထဲကနေ ID ကို ရှာတယ်
+            reply_to_text = message.reply_to_message.caption if message.reply_to_message.caption else message.reply_to_message.text
+            found_ids = re.findall(r"ID: (\d+)", reply_to_text)
             
             if found_ids:
                 target_id = int(found_ids[0])
-                bot.send_message(target_id, f"👨‍💻 **Admin မှ ပြန်ကြားစာ:**\n\n{message.text}")
+                
+                # Admin က စာပြန်ပို့ရင်
+                if message.content_type == 'text':
+                    bot.send_message(target_id, f"👨‍💻 **Admin မှ ပြန်ကြားစာ:**\n\n{message.text}")
+                
+                # Admin က ဓာတ်ပုံပြန်ပို့ရင်
+                elif message.content_type == 'photo':
+                    admin_caption = f"👨‍💻 **Admin မှ ပုံပို့လိုက်ပါတယ်:**\n\n{message.caption if message.caption else ''}"
+                    bot.send_photo(target_id, message.photo[-1].file_id, caption=admin_caption)
+                
                 bot.send_message(ADMIN_ID, "✅ ပြန်စာပို့ပြီးပါပြီ။")
             else:
                 bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသော Bot စာကို Reply ထောက်ပေးပါ။")
@@ -211,10 +229,8 @@ def handle_all(message):
 # --- Run Bot ---
 
 if __name__ == "__main__":
-    # Flask Port ကို Background တွင် Run ထားခြင်း (Render အိပ်မသွားစေရန်)
     Thread(target=run_flask).start()
-    print("🚀 Bot is starting with Long Polling + Keep-alive...")
+    print("🚀 Bot is starting with Long Polling + Keep-alive (Photo Support)...")
     
     bot.remove_webhook()
-    # timeout ကို ၁၀ စက္ကန့် သတ်မှတ်ထားခြင်းဖြင့် ပိုတည်ငြိမ်စေသည်
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
