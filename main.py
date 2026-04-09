@@ -2,14 +2,26 @@ import telebot
 import os
 import re
 import time
+from threading import Thread
+from flask import Flask
 
 # --- Bot Configuration ---
 TOKEN = "8688726016:AAG7AqgFbRMPHO4w_MsOQeeqmhbE4c_TLnc"
 ADMIN_ID = 1847021130 
 
 bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
 
-# User တစ်ခါစာပို့ပြီးရင် မှတ်ထားရန် စာရင်း (Restart ချတိုင်း အသစ်ပြန်ဖြစ်မည်)
+# Render တွင် Port Scan Error မတက်စေရန် Flask Keep-alive ဖွင့်ခြင်း
+@app.route('/')
+def index():
+    return "✅ Ren Digital Bot is Running with Keep-alive!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
+
+# --- Global Variables ---
 notified_users = set()
 MAINTENANCE_MODE = False
 
@@ -35,7 +47,7 @@ def start(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- Services Handlers (ဈေးနှုန်းများ) ---
+# --- Services Handlers ---
 
 @bot.message_handler(func=lambda m: m.text == "💎 Telegram Premium")
 def tg_price(message):
@@ -196,9 +208,13 @@ def handle_all(message):
         except Exception as e:
             bot.send_message(ADMIN_ID, f"❌ Error: {str(e)}")
 
-# --- Run Bot with Polling ---
+# --- Run Bot ---
 
 if __name__ == "__main__":
-    print("🚀 Bot is starting with Long Polling...")
+    # Flask Port ကို Background တွင် Run ထားခြင်း (Render အိပ်မသွားစေရန်)
+    Thread(target=run_flask).start()
+    print("🚀 Bot is starting with Long Polling + Keep-alive...")
+    
     bot.remove_webhook()
-    bot.infinity_polling()
+    # timeout ကို ၁၀ စက္ကန့် သတ်မှတ်ထားခြင်းဖြင့် ပိုတည်ငြိမ်စေသည်
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)
