@@ -15,15 +15,29 @@ app = Flask(__name__)
 # Render Port Keep-alive
 @app.route('/')
 def index():
-    return "✅ Ren Digital Bot is Running!"
+    return "✅ Ren Digital Bot is Running with Broadcast System!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
 
-# --- Global Variables ---
+# --- Global Variables & User Database ---
+USER_DB = "users.txt"
 notified_users = set()
 MAINTENANCE_MODE = False
+
+# User ID များကို သိမ်းဆည်းရန် Function
+def save_user(user_id):
+    user_id = str(user_id)
+    if not os.path.exists(USER_DB):
+        with open(USER_DB, "w") as f: f.write("")
+    
+    with open(USER_DB, "r") as f:
+        users = f.read().splitlines()
+    
+    if user_id not in users:
+        with open(USER_DB, "a") as f:
+            f.write(user_id + "\n")
 
 def main_menu():
     markup = telebot.types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
@@ -36,9 +50,40 @@ def main_menu():
     markup.add(*(telebot.types.KeyboardButton(text) for text in btns))
     return markup
 
+# --- Admin Commands ---
+
+# Broadcast စနစ် (Admin သာ သုံးနိုင်သည်)
+@bot.message_handler(commands=['broadcast'])
+def broadcast(message):
+    if message.chat.id == ADMIN_ID:
+        msg_text = message.text.replace("/broadcast", "").strip()
+        if not msg_text:
+            bot.reply_to(message, "❌ ပို့မည့်စာသား ထည့်ပေးပါ (ဥပမာ- `/broadcast မင်္ဂလာပါ`)")
+            return
+        
+        if not os.path.exists(USER_DB):
+            bot.reply_to(message, "❌ User စာရင်း မရှိသေးပါ။")
+            return
+
+        with open(USER_DB, "r") as f:
+            users = f.read().splitlines()
+
+        count = 0
+        bot.send_message(ADMIN_ID, f"📢 လူပေါင်း {len(users)} ယောက်ကို စာပို့နေပါပြီ...")
+        
+        for user_id in users:
+            try:
+                bot.send_message(user_id, f"📢 **Ren Digital Service မှ အကြောင်းကြားစာ**\n\n{msg_text}", parse_mode="Markdown")
+                count += 1
+                time.sleep(0.05) 
+            except: pass
+        
+        bot.send_message(ADMIN_ID, f"✅ စုစုပေါင်း {count} ယောက်ဆီ စာပို့ပြီးပါပြီ။")
+
 # --- Start Command ---
 @bot.message_handler(commands=['start'])
 def start(message):
+    save_user(message.chat.id)
     user_name = message.from_user.first_name
     welcome_text = (
         f"မင်္ဂလာပါ **{user_name}** ခင်ဗျာ။ 🙏\n"
@@ -174,6 +219,7 @@ def admin_and_channel(message):
 @bot.message_handler(content_types=['text', 'photo', 'document'])
 def handle_all_messages(message):
     if message.chat.id != ADMIN_ID:
+        save_user(message.chat.id)
         if MAINTENANCE_MODE:
             bot.reply_to(message, "🛠 Bot ကို ပြုပြင်နေပါသည်။")
             return
@@ -212,4 +258,4 @@ if __name__ == "__main__":
     Thread(target=run_flask).start()
     bot.remove_webhook()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
-
+    
