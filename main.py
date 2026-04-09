@@ -12,10 +12,10 @@ ADMIN_ID = 1847021130
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Render တွင် Port Scan Error မတက်စေရန် Flask Keep-alive ဖွင့်ခြင်း
+# Render Port Keep-alive
 @app.route('/')
 def index():
-    return "✅ Ren Digital Bot is Running with Keep-alive!"
+    return "✅ Ren Digital Bot is Running!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -47,7 +47,7 @@ def start(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- Services Handlers ---
+# --- Services Handlers (Pricing) ---
 
 @bot.message_handler(func=lambda m: m.text == "💎 Telegram Premium")
 def tg_price(message):
@@ -56,7 +56,7 @@ def tg_price(message):
         "━━━━━━━━━━━━━━━━━━\n"
         "🔹 3 Months  ➔  53,000 MMK\n"
         "🔹 6 Months  ➔  75,000 MMK\n"
-        "🔹 1 Year      ➔  130,000 MMK\n"
+        "🔹 1 Year    ➔  130,000 MMK\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "💡 Gift အနေနဲ့ တိုက်ရိုက်ပို့ဆောင်ပေးမှာပါ။"
     )
@@ -89,7 +89,7 @@ def ai_price(message):
         "• Own Acc (5 Inv)  ➔  20,000 Ks\n\n"
         "🔍 Perplexity Pro AI (1 Month) ➔  8,000 Ks\n"
         "🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks\n"
-        "❌Chat GPT မရသေးပါ"
+        "❌ Chat GPT မရသေးပါ"
     )
     bot.reply_to(message, msg, parse_mode="Markdown")
 
@@ -113,7 +113,7 @@ def music_price(message):
 @bot.message_handler(func=lambda m: m.text == "🎬 CapCut Pro Premium")
 def capcut_price(message):
     msg = (
-        "🎬 **CapCut Pro Premium (All Devices)**\n"
+        "🎬 **CapCut Pro Premium**\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "📌 **1 Month Plan**\n"
         "• Share Account   ➔  9,000 Ks\n"
@@ -126,7 +126,7 @@ def capcut_price(message):
         "• Private Mail    ➔  74,000 Ks\n"
         "• Own Mail        ➔  84,000 Ks\n"
         "━━━━━━━━━━━━━━━━━━\n"
-        "✨ 4K Export, No Watermark, All Pro Effects!"
+        "✨ 4K Export, No Watermark!"
     )
     bot.reply_to(message, msg, parse_mode="Markdown")
 
@@ -169,68 +169,47 @@ def admin_and_channel(message):
     )
     bot.reply_to(message, text, parse_mode="Markdown")
 
-# --- Forward & Reply System (စာရော ပုံပါ ရအောင် ပြင်ထားသည်) ---
+# --- Forward & Reply System (Media Support) ---
 
-@bot.message_handler(content_types=['text', 'photo'])
-def handle_all(message):
+@bot.message_handler(content_types=['text', 'photo', 'document'])
+def handle_all_messages(message):
     if message.chat.id != ADMIN_ID:
         if MAINTENANCE_MODE:
-            bot.reply_to(message, "🛠 Bot ကို ပြုပြင်နေပါသည်။ @Ren2512 ထံ တိုက်ရိုက်စာပို့ပေးပါ။")
+            bot.reply_to(message, "🛠 Bot ကို ပြုပြင်နေပါသည်။")
             return
         
         c_name = message.from_user.first_name
-        c_user = f"@{message.from_user.username}" if message.from_user.username else "No Username"
-        
-        info_header = (
-            f"📩 **Message အသစ်!**\n"
-            f"👤 နာမည်: {c_name}\n"
-            f"🔗 Username: {c_user}\n"
-            f"🆔 ID: {message.chat.id}"
-        )
+        info_header = f"📩 **Message အသစ်!**\n👤 နာမည်: {c_name}\n🆔 ID: {message.chat.id}"
 
-        # Customer ဆီက စာသားလာရင်
         if message.content_type == 'text':
-            admin_msg = f"{info_header}\n📝 စာသား: {message.text}"
-            bot.send_message(ADMIN_ID, admin_msg, parse_mode="Markdown")
-        
-        # Customer ဆီက ဓာတ်ပုံလာရင်
+            bot.send_message(ADMIN_ID, f"{info_header}\n📝 စာသား: {message.text}")
         elif message.content_type == 'photo':
-            caption = f"{info_header}\n🖼️ (Customer ထံမှ ဓာတ်ပုံ ပေးပို့ချက်)"
-            bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=caption, parse_mode="Markdown")
-        
+            bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=f"{info_header}\n🖼️ (ဓာတ်ပုံပို့ထားသည်)")
+        elif message.content_type == 'document':
+            bot.send_document(ADMIN_ID, message.document.file_id, caption=f"{info_header}\n📄 (ဖိုင်ပို့ထားသည်)")
+
         if message.chat.id not in notified_users:
-            bot.reply_to(message, "✅ လူကြီးမင်း၏စာ (သို့မဟုတ် ဓာတ်ပုံ) ကို Admin ထံ ပေးပို့လိုက်ပါပြီ။")
+            bot.reply_to(message, "✅ စာကို Admin ထံ ပေးပို့လိုက်ပါပြီ။")
             notified_users.add(message.chat.id)
             
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
-            # Reply ထောက်ထားတဲ့ စာ (သို့မဟုတ် Caption) ထဲကနေ ID ကို ရှာတယ်
-            reply_to_text = message.reply_to_message.caption if message.reply_to_message.caption else message.reply_to_message.text
-            found_ids = re.findall(r"ID: (\d+)", reply_to_text)
+            target_text = message.reply_to_message.caption if message.reply_to_message.caption else message.reply_to_message.text
+            target_id = int(re.findall(r"ID: (\d+)", target_text)[0])
             
-            if found_ids:
-                target_id = int(found_ids[0])
-                
-                # Admin က စာပြန်ပို့ရင်
-                if message.content_type == 'text':
-                    bot.send_message(target_id, f"👨‍💻 **Admin မှ ပြန်ကြားစာ:**\n\n{message.text}")
-                
-                # Admin က ဓာတ်ပုံပြန်ပို့ရင်
-                elif message.content_type == 'photo':
-                    admin_caption = f"👨‍💻 **Admin မှ ပုံပို့လိုက်ပါတယ်:**\n\n{message.caption if message.caption else ''}"
-                    bot.send_photo(target_id, message.photo[-1].file_id, caption=admin_caption)
-                
-                bot.send_message(ADMIN_ID, "✅ ပြန်စာပို့ပြီးပါပြီ။")
-            else:
-                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသော Bot စာကို Reply ထောက်ပေးပါ။")
-        except Exception as e:
-            bot.send_message(ADMIN_ID, f"❌ Error: {str(e)}")
-
-# --- Run Bot ---
+            if message.content_type == 'text':
+                bot.send_message(target_id, f"👨‍💻 **Admin ပြန်စာ:**\n\n{message.text}")
+            elif message.content_type == 'photo':
+                bot.send_photo(target_id, message.photo[-1].file_id, caption=f"👨‍💻 **Admin ပုံပို့လိုက်သည်:**\n\n{message.caption if message.caption else ''}")
+            elif message.content_type == 'document':
+                bot.send_document(target_id, message.document.file_id, caption=f"👨‍💻 **Admin ဖိုင်ပို့လိုက်သည်:**\n\n{message.caption if message.caption else ''}")
+            
+            bot.send_message(ADMIN_ID, "✅ ပို့ပြီးပါပြီ။")
+        except:
+            bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပါ။")
 
 if __name__ == "__main__":
     Thread(target=run_flask).start()
-    print("🚀 Bot is starting with Long Polling + Keep-alive (Photo Support)...")
-    
     bot.remove_webhook()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
+
