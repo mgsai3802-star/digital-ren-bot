@@ -15,7 +15,7 @@ app = Flask(__name__)
 # Render Port Keep-alive
 @app.route('/')
 def index():
-    return "✅ Ren Digital Bot is Running with Auto-Save ID!"
+    return "✅ Ren Digital Bot is Running with Recovered IDs!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -26,11 +26,17 @@ USER_DB = "users.txt"
 notified_users = set()
 MAINTENANCE_MODE = False
 
-# User ID များကို သိမ်းဆည်းရန် Function
+# အရင်ရှိပြီးသား ID များကို Recovery လုပ်ရန်စာရင်း (ဘာမှမဖျက်ဘဲ ထည့်ထားသည်)
+OLD_IDS = [
+    "1847021130", "8577702613", "5389816539", 
+    "8413508432", "7662829742", "6050862261", "1693167795"
+]
+
+# User ID များကို စိတ်ချရစွာ သိမ်းဆည်းရန် Function
 def save_user(user_id):
     user_id = str(user_id)
     if not os.path.exists(USER_DB):
-        with open(USER_DB, "w") as f: f.write("")
+        with open(USER_DB, "w") as f: pass
     
     with open(USER_DB, "r") as f:
         users = f.read().splitlines()
@@ -38,6 +44,11 @@ def save_user(user_id):
     if user_id not in users:
         with open(USER_DB, "a") as f:
             f.write(user_id + "\n")
+
+# Bot စတက်တာနဲ့ အရင် ID ဟောင်းများကို အလိုအလျောက် သိမ်းပေးမည့် Function
+def recover_old_ids():
+    for uid in OLD_IDS:
+        save_user(uid)
 
 def main_menu():
     markup = telebot.types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
@@ -262,6 +273,8 @@ def handle_all_messages(message):
             bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပါ။")
 
 if __name__ == "__main__":
+    # Bot စတင်သည်နှင့် ID ဟောင်းများကို Recover လုပ်မည်
+    recover_old_ids()
     Thread(target=run_flask).start()
     bot.remove_webhook()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
