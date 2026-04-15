@@ -18,7 +18,7 @@ def index():
     return "✅ Ren Digital Bot is Running Perfectly!"
 
 def run_flask():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
 # --- Global Variables & User Database ---
@@ -176,9 +176,9 @@ def services_pricing(message):
                "🔗 https://t.me/premiumren")
         bot.send_message(chat_id, msg, parse_mode="Markdown")
 
-# --- Callback Query Handler ---
+# --- Callback Query Handler (ဝယ်မယ်နှိပ်ရင် အလုပ်လုပ်ရန် သေသေချာချာပြင်ဆင်မှု) ---
 @bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
+def callback_listener(call):
     if call.data.startswith('buy_'):
         plan_code = call.data.replace("buy_", "")
         current_time = int(time.time())
@@ -200,12 +200,17 @@ def callback_query(call):
             "📌 *မှတ်ချက် - ဝယ်ယူမှုကို ဖျက်သိမ်းလိုပါက ၃ မိနစ်အတွင်းသာ Cancel နှိပ်ခွင့်ရှိပါသည်။*"
         )
         
-        # Message ကို Update လုပ်ရန် (ဒီနေရာမှာ edit_message_text ကို သုံးမှ Button တွေ ပျောက်ပြီး စာသားအသစ်ပေါ်မှာပါ)
-        try:
-            bot.edit_message_text(payment_info, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-            bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan_code}`\nဝယ်ယူသူ: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
-        except:
-            pass
+        # User ဘက်မှာ စာသားပြောင်းပေးခြင်း
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=payment_info,
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
+        
+        # Admin ဆီသို့ Notification ပို့ခြင်း
+        bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan_code}`\nဝယ်ယူသူ: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
 
     elif call.data.startswith('cancel_'):
         data_parts = call.data.split('_')
@@ -293,5 +298,5 @@ if __name__ == "__main__":
     recover_old_ids()
     Thread(target=run_flask).start()
     bot.remove_webhook()
+    time.sleep(1)
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
-            
