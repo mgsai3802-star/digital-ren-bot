@@ -4,7 +4,6 @@ import re
 import time
 from threading import Thread
 from flask import Flask
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # --- Bot Configuration ---
 TOKEN = "8688726016:AAG7AqgFbRMPHO4w_MsOQeeqmhbE4c_TLnc"
@@ -21,10 +20,9 @@ def run_flask():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# --- Global Variables & User Database ---
+# --- Global Variables ---
 USER_DB = "users.txt"
 notified_users = set()
-
 OLD_IDS = ["1847021130", "8577702613", "5389816539", "8413508432", "7662829742", "6050862261", "1693167795"]
 
 def save_user(user_id):
@@ -41,6 +39,7 @@ def recover_old_ids():
     for uid in OLD_IDS:
         save_user(uid)
 
+# --- Main Menu & Sub Menus ---
 def main_menu():
     markup = telebot.types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btns = [
@@ -52,40 +51,12 @@ def main_menu():
     markup.add(*(telebot.types.KeyboardButton(text) for text in btns))
     return markup
 
-# --- 1. Callback Handler (ခလုတ်နှိပ်ရင် အလုပ်လုပ်မည့်အပိုင်း) ---
-@bot.callback_query_handler(func=lambda call: True)
-def callback_listener(call):
-    # ခလုတ်နှိပ်လိုက်ရင် ဝိုင်းဝိုင်းလည်မနေအောင် answer အရင်ပို့ရပါမယ်
-    bot.answer_callback_query(call.id)
-    
-    if call.data.startswith('buy_'):
-        plan_name = call.data.replace("buy_", "")
-        
-        payment_info = (
-            "✅ လူကြီးမင်း၏ ဝယ်ယူမှုကို လက်ခံရရှိပါပြီခင်ဗျာ။\n\n"
-            "ကျွန်ုပ်တို့ဘက်မှ လုပ်ဆောင်နေပါသည်၊၊ **Admin လိုင်းတက်စာပြန်မှ ငွေလွှဲပေးတာ ပိုပြီးအဆင်ပြေပါတယ်ဗျ။**\n\n"
-            "လွှဲရန် အဆင်ပြေသည့်အချိန်တွင် အောက်ပါအကောင့်သို့ လွှဲပေးနိုင်ပါသည်ခင်ဗျာ။\n\n"
-            "💰 **Payment Accounts:**\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "📱 Kpay: `09776319707`\n"
-            "📱 Wave: `09776319707`\n"
-            "👤 Name: **Sai Thet Thu Aung**\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "⚠️ ငွေလွှဲပြီးပါက Screenshot ပို့ပေးရန် မေတ္တာရပ်ခံအပ်ပါသည်။"
-        )
-        
-        # Message ကို Update လုပ်ပြီး Payment အချက်အလက်ပြပါမယ်
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            text=payment_info,
-            parse_mode="Markdown"
-        )
-        
-        # Admin ဆီသို့ Notification ပို့ခြင်း
-        bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan_name}`\nဝယ်ယူသူ: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
+def purchase_menu():
+    markup = telebot.types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    markup.add(telebot.types.KeyboardButton("🛒 ဝယ်ယူမည်"), telebot.types.KeyboardButton("🔙 Main Menu သို့ပြန်ရန်"))
+    return markup
 
-# --- 2. Pricing Handlers (စာသားများ အညီညာဆုံး ပြန်ညှိထားပါသည်) ---
+# --- Services Price Handlers ---
 @bot.message_handler(func=lambda m: m.text in [
     "💎 Telegram Premium", "🌐 VPN ဝန်ဆောင်မှု", "🤖 AI Premium Tools", 
     "🎬 Music & Entertainment", "🎬 CapCut Pro Premium", "🌟 အခြားပရီမီယံများ", 
@@ -94,7 +65,7 @@ def callback_listener(call):
 def services_pricing(message):
     save_user(message.chat.id)
     text = message.text
-    chat_id = message.chat.id
+    msg = ""
 
     if text == "💎 Telegram Premium":
         msg = ("💎 **Telegram Premium Pricing**\n"
@@ -104,12 +75,6 @@ def services_pricing(message):
                "🔹 1 Year    ➔  130,000 MMK\n"
                "━━━━━━━━━━━━━━━━━━\n"
                "💡 Gift အနေနဲ့ တိုက်ရိုက်ပို့ဆောင်ပေးမှာပါ။")
-        markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🔹 3 Months ဝယ်မည်", callback_data="buy_tg3m"),
-                   InlineKeyboardButton("🔹 6 Months ဝယ်မည်", callback_data="buy_tg6m"))
-        markup.row(InlineKeyboardButton("🔹 1 Year ဝယ်မည်", callback_data="buy_tg1y"))
-        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
-
     elif text == "🌐 VPN ဝန်ဆောင်မှု":
         msg = ("🌐 **VPN Service Pricing**\n"
                "━━━━━━━━━━━━━━━━━━\n"
@@ -119,13 +84,6 @@ def services_pricing(message):
                "• 50 GB Plan  ➔  5,000 Ks\n"
                "• 100 GB Plan ➔  10,000 Ks\n"
                "━━━━━━━━━━━━━━━━━━")
-        markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🚀 Express ဝယ်မည်", callback_data="buy_vexp"), 
-                   InlineKeyboardButton("🐢 HMA ဝယ်မည်", callback_data="buy_vhma"))
-        markup.row(InlineKeyboardButton("📡 NPV 50GB ဝယ်မည်", callback_data="buy_v50"), 
-                   InlineKeyboardButton("📡 NPV 100GB ဝယ်မည်", callback_data="buy_v100"))
-        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
-
     elif text == "🤖 AI Premium Tools":
         msg = ("🤖 **AI Premium Tools**\n"
                "━━━━━━━━━━━━━━━━━━\n"
@@ -138,13 +96,6 @@ def services_pricing(message):
                "🔍 Perplexity Pro AI (1 Month) ➔  8,000 Ks\n"
                "🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks\n"
                "❌ Chat GPT မရသေးပါ")
-        markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("✨ Gemini ဝယ်မည်", callback_data="buy_agem"), 
-                   InlineKeyboardButton("💬 ChatGPT ဝယ်မည်", callback_data="buy_agpt"))
-        markup.row(InlineKeyboardButton("🔍 Perplexity ဝယ်မည်", callback_data="buy_appx"), 
-                   InlineKeyboardButton("🎨 AI Fiesta ဝယ်မည်", callback_data="buy_afie"))
-        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
-
     elif text == "🎬 Music & Entertainment":
         msg = ("🎬 **Music & Entertainment**\n"
                "━━━━━━━━━━━━━━━━━━\n"
@@ -157,12 +108,6 @@ def services_pricing(message):
                "• 3 Months  ➔  37,000 Ks\n\n"
                "🌊 Tidal Music (1 Month)   ➔  3,000 Ks\n"
                "🎼 Deezer Music (1 Month)  ➔  4,000 Ks")
-        markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🎵 Spotify ဝယ်မည်", callback_data="buy_mspo"))
-        markup.row(InlineKeyboardButton("🌊 Tidal ဝယ်မည်", callback_data="buy_mtid"), 
-                   InlineKeyboardButton("🎼 Deezer ဝယ်မည်", callback_data="buy_mdee"))
-        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
-
     elif text == "🎬 CapCut Pro Premium":
         msg = ("🎬 **CapCut Pro Premium**\n"
                "━━━━━━━━━━━━━━━━━━\n"
@@ -178,10 +123,6 @@ def services_pricing(message):
                "• Own Mail        ➔  84,000 Ks\n"
                "━━━━━━━━━━━━━━━━━━\n"
                "✨ 4K Export, No Watermark!")
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="buy_ccut"))
-        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
-
     elif text == "🌟 အခြားပရီမီယံများ":
         msg = ("🌟 **Other Premium Services**\n"
                "━━━━━━━━━━━━━━━━━━\n"
@@ -190,10 +131,6 @@ def services_pricing(message):
                "📹 Zoom License (14 Days)  ➔  6,000 Ks\n"
                "📹 Zoom License (28 Days)  ➔  11,000 Ks\n"
                "📚 Gregmat+ (1 Month)      ➔  10,000 Ks")
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="buy_oth"))
-        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
-
     elif text == "🛡️ Hotspot Shield Free":
         msg = ("🛡️ **Hotspot Shield VPN (7 Days Free)**\n"
                "━━━━━━━━━━━━━━━━━━\n"
@@ -205,26 +142,46 @@ def services_pricing(message):
                "• `wate.rfestival@gmail.com` \n\n"
                "🔑 **Password** ➔ `Saithet111@222` \n"
                "📌 (အကောင့်တစ်ခုကို 10 devices သုံးရ)")
-        bot.send_message(chat_id, msg, parse_mode="Markdown")
-
+        bot.send_message(message.chat.id, msg, parse_mode="Markdown", reply_markup=main_menu())
+        return
     elif text == "👨‍💻 Admin နှင့် စကားပြောရန် သို့မဟုတ် Channel Join ရန်":
         msg = ("👨‍💻 **Admin နှင့် ဆက်သွယ်ရန်**\n"
-               "Admin (@Ren2512) ထံ တိုက်ရိုက်ဆက်သွယ်နိုင်သလို ဤ Bot ထဲတွင်လည်း စာရေးသားပေးပို့နိုင်ပါသည်။\n\n"
+               "Admin (@Ren2512) ထံ တိုက်ရိုက်ဆက်သွယ်နိုင်ပါသည်။\n\n"
                "📢 **Channel Join ရန်**\n"
                "🔗 https://t.me/premiumren")
-        bot.send_message(chat_id, msg, parse_mode="Markdown")
+        bot.send_message(message.chat.id, msg, parse_mode="Markdown", reply_markup=main_menu())
+        return
+    
+    bot.send_message(message.chat.id, msg, parse_mode="Markdown", reply_markup=purchase_menu())
 
-# --- 3. Start Command ---
+# --- Purchase Button Handler ---
+@bot.message_handler(func=lambda m: m.text == "🛒 ဝယ်ယူမည်")
+def handle_purchase(message):
+    pay_info = (
+        "✅ လူကြီးမင်း၏ ဝယ်ယူမှုကို လက်ခံရရှိပါပြီခင်ဗျာ။\n\n"
+        "ကျွန်ုပ်တို့ဘက်မှ လုပ်ဆောင်နေပါသည်၊၊ **Admin လိုင်းတက်စာပြန်မှ ငွေလွှဲပေးတာ ပိုပြီးအဆင်ပြေပါတယ်ဗျ။**\n\n"
+        "လွှဲရန် အဆင်ပြေသည့်အချိန်တွင် အောက်ပါအကောင့်သို့ လွှဲပေးနိုင်ပါသည်ခင်ဗျာ။\n\n"
+        "💰 **Payment Accounts:**\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "📱 Kpay: `09776319707`\n"
+        "📱 Wave: `09776319707`\n"
+        "👤 Name: **Sai Thet Thu Aung**\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "⚠️ ငွေလွှဲပြီးပါက Screenshot ပို့ပေးရန် မေတ္တာရပ်ခံအပ်ပါသည်။"
+    )
+    bot.send_message(message.chat.id, pay_info, parse_mode="Markdown", reply_markup=main_menu())
+    bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\nဝယ်ယူသူ: {message.from_user.first_name}\nID: `ID: {message.chat.id}`", parse_mode="Markdown")
+
+@bot.message_handler(func=lambda m: m.text == "🔙 Main Menu သို့ပြန်ရန်")
+def back_to_main(message):
+    bot.send_message(message.chat.id, "မူလ Menu သို့ ပြန်ရောက်ပါပြီ။", reply_markup=main_menu())
+
+# --- Start & Admin Forward System ---
 @bot.message_handler(commands=['start'])
 def start(message):
     save_user(message.chat.id)
-    user_name = message.from_user.first_name
-    welcome_text = (f"မင်္ဂလာပါ **{user_name}** ခင်ဗျာ။ 🙏\n"
-                    "**Ren Digital Service** မှ ကြိုဆိုပါတယ်ခင်ဗျ။\n\n"
-                    "လိုအပ်တဲ့ ပရီမီယံများအတွက် အောက်က Menu ကိုနှိပ်၍ ကြည့်ရှုနိုင်ပါတယ်ခင်ဗျာ။")
-    bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
+    bot.send_message(message.chat.id, f"မင်္ဂလာပါ **{message.from_user.first_name}** ခင်ဗျာ။ 🙏\n**Ren Digital Service** မှ ကြိုဆိုပါတယ်ခင်ဗျ။\n\nလိုအပ်တဲ့ ပရီမီယံများအတွက် Menu ကိုနှိပ်ကြည့်နိုင်ပါတယ်ခင်ဗျာ။", reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- 4. Admin & Forward System ---
 @bot.message_handler(content_types=['text', 'photo', 'document', 'audio', 'voice', 'video'])
 def handle_all_media(message):
     if message.chat.id != ADMIN_ID:
@@ -239,12 +196,11 @@ def handle_all_media(message):
             notified_users.add(message.chat.id)
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
-            # ID ကို caption ထဲကနေ ရှာပြီး ပြန်စာပို့ခြင်း
             target_id = int(re.findall(r"ID: (\d+)", message.reply_to_message.caption or message.reply_to_message.text)[0])
             bot.send_message(target_id, f"👨‍💻 **Admin ပြန်စာ:**\n\n{message.text}", reply_markup=main_menu())
             bot.send_message(ADMIN_ID, "✅ ပို့ပြီးပါပြီ။")
         except:
-            bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပါ။")
+            bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။")
 
 if __name__ == "__main__":
     recover_old_ids()
@@ -252,4 +208,4 @@ if __name__ == "__main__":
     bot.remove_webhook()
     time.sleep(1)
     bot.infinity_polling(timeout=30, long_polling_timeout=15)
-        
+    
