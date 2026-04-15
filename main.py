@@ -95,7 +95,7 @@ def start(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- Services Handlers (Menu နှိပ်လျှင်လည်း ID သိမ်းပေးရန် save_user ထည့်ထားသည်) ---
+# --- Services Handlers ---
 
 @bot.message_handler(func=lambda m: m.text == "💎 Telegram Premium")
 def tg_price(message):
@@ -204,11 +204,11 @@ def hotspot_price(message):
         "🛡️ **Hotspot Shield VPN (7 Days Free)**\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "📧 **Accounts List:**\n"
-        "• `renv@gmail.com` \n"
-        "• `r.env@gmail.com` \n"
-        "• `re.nv@gmail.com` \n"
-        "• `ren.v@gmail.com` \n"
-        "• `re.n.v@gmail.com` \n\n"
+        "• `waterfestival@gmail.com` \n"
+        "• `w.aterfestival@gmail.com` \n"
+        "• `wa.terfestival@gmail.com` \n"
+        "• `wat.erfestival@gmail.com` \n"
+        "• `wate.rfestival@gmail.com` \n\n"
         "🔑 **Password** ➔ `Saithet111@222` \n"
         "📌 (အကောင့်တစ်ခုကို 10 devices သုံးရ)"
     )
