@@ -12,6 +12,9 @@ ADMIN_ID = 1847021130
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
+# User တွေကို reply တစ်ခါပဲ ပြန်ဖို့အတွက် temporary storage
+notified_users = set()
+
 @app.route('/')
 def index():
     return "✅ Ren Digital Bot is Running Perfectly!"
@@ -20,7 +23,7 @@ def run_flask():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# --- Database ---
+# --- Database Functions ---
 USER_DB = "users.txt"
 OLD_IDS = ["1847021130", "8577702613", "5389816539", "8413508432", "7662829742", "6050862261", "1693167795"]
 order_times = {}
@@ -30,7 +33,7 @@ def save_user(user_id):
     if not os.path.exists(USER_DB):
         with open(USER_DB, "w") as f: pass
     with open(USER_DB, "r") as f:
-        users = f.read().splitlines()
+        users = set(f.read().splitlines())
     if user_id not in users:
         with open(USER_DB, "a") as f:
             f.write(user_id + "\n")
@@ -82,7 +85,8 @@ def cancel_menu():
     markup.add("❌ ဝယ်ယူမှုကို ဖျက်သိမ်းမည် (Cancel)", "🔙 Main Menu")
     return markup
 
-# --- Start Command ---
+# --- Start & Admin Commands ---
+
 @bot.message_handler(commands=['start'])
 def start(message):
     save_user(message.chat.id)
@@ -91,8 +95,6 @@ def start(message):
                     "**Ren Digital Service** မှ ကြိုဆိုပါတယ်ခင်ဗျ။\n\n"
                     "လိုအပ်တဲ့ ပရီမီယံများအတွက် အောက်က Menu ကိုနှိပ်၍ ကြည့်ရှုနိုင်ပါတယ်ခင်ဗျာ။")
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
-
-# --- Admin Commands ---
 
 @bot.message_handler(commands=['userlist'])
 def show_user_list(message):
@@ -142,10 +144,19 @@ def show_pricing(message):
         msg = ("🎬 **Music & Entertainment**\n━━━━━━━━━━━━━━━━━━\n🎵 **Spotify Family Invite**\n• 1 Month   ➔  11,000 Ks\n• 2 Months  ➔  17,000 Ks\n• 3 Months  ➔  23,000 Ks\n\n🎧 **Spotify Individual Acc**\n• 1 Month   ➔  15,000 Ks\n• 3 Months  ➔  37,000 Ks\n\n🌊 Tidal Music (1 Month)   ➔  3,000 Ks\n🎼 Deezer Music (1 Month)  ➔  4,000 Ks")
         bot.send_message(cid, msg, reply_markup=music_menu(), parse_mode="Markdown")
     elif t == "🎬 CapCut Pro Premium":
-        msg = ("🎬 **CapCut Pro Premium**\n━━━━━━━━━━━━━━━━━━\n📌 **1 Month Plan**\n• Share Account   ➔  9,000 Ks\n• Private Mail    ➔  14,000 Ks\n• Own Mail        ➔  16,000 Ks\n\n📌 **6 Month Plan**\n• Private Mail    ➔  45,000 Ks\n• Own Mail        ➔  54,000 Ks\n\n📌 **1 Year Plan**\n• Private Mail    ➔  74,000 Ks\n• Own Mail        ➔  84,000 Ks\n━━━━━━━━━━━━━━━━━━\n✨ 4K Export, No Watermark!")
+        msg = ("🎬 **CapCut Pro Premium**\n━━━━━━━━━━━━━━━━━━\n"
+               "📌 **1 Month Plan**\n• Share Account   ➔  9,000 Ks\n• Private Mail    ➔  14,000 Ks\n• Own Mail        ➔  16,000 Ks\n\n"
+               "📌 **6 Month Plan**\n• Private Mail    ➔  45,000 Ks\n• Own Mail        ➔  54,000 Ks\n\n"
+               "📌 **1 Year Plan**\n• Private Mail    ➔  74,000 Ks\n• Own Mail        ➔  84,000 Ks\n"
+               "━━━━━━━━━━━━━━━━━━\n✨ 4K Export, No Watermark!")
         bot.send_message(cid, msg, reply_markup=capcut_menu(), parse_mode="Markdown")
     elif t == "🌟 အခြားပရီမီယံများ":
-        msg = ("🌟 **Other Premium Services**\n━━━━━━━━━━━━━━━━━━\n🖼️ Canva Edu (1 Year)      ➔  5,000 Ks\n📸 PicsArt Pro (1 Month)   ➔  5,000 Ks\n📹 Zoom License (14 Days)  ➔  6,000 Ks\n📹 Zoom License (28 Days)  ➔  11,000 Ks\n📚 Gregmat+ (1 Month)      ➔  10,000 Ks")
+        msg = ("🌟 **Other Premium Services**\n━━━━━━━━━━━━━━━━━━\n"
+               "🖼️ Canva Edu (1 Year)      ➔  5,000 Ks\n"
+               "📸 PicsArt Pro (1 Month)   ➔  5,000 Ks\n"
+               "📹 Zoom License (14 Days)  ➔  6,000 Ks\n"
+               "📹 Zoom License (28 Days)  ➔  11,000 Ks\n"
+               "📚 Gregmat+ (1 Month)      ➔  10,000 Ks")
         bot.send_message(cid, msg, reply_markup=others_menu(), parse_mode="Markdown")
     elif t == "🛡️ Hotspot Shield Free":
         msg = ("🛡️ **Hotspot Shield VPN (7 Days Free)**\n━━━━━━━━━━━━━━━━━━\n📧 **Accounts List:**\n• `waterfestival@gmail.com` \n• `w.aterfestival@gmail.com` \n• `wa.terfestival@gmail.com` \n• `wat.erfestival@gmail.com` \n• `wate.rfestival@gmail.com` \n\n🔑 **Password** ➔ `Saithet111@222` \n📌 (အကောင့်တစ်ခုကို 10 devices သုံးရ)")
@@ -161,6 +172,7 @@ def show_pricing(message):
 @bot.message_handler(func=lambda m: m.text.startswith("🛒"))
 def handle_buy(message):
     cid = message.chat.id
+    save_user(cid)
     order_times[cid] = int(time.time())
     item = message.text.replace("🛒 ", "")
     
@@ -177,24 +189,27 @@ def handle_buy(message):
         "📌 *Cancel ကို ၃ မိနစ်အတွင်းသာ နှိပ်နိုင်ပါမည်။*"
     )
     bot.send_message(cid, pay_msg, reply_markup=cancel_menu(), parse_mode="Markdown")
-    bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်!**\nItem: `{item}`\nUser: {message.from_user.first_name}\nID: `ID: {cid}`")
+    # Admin ထံ ပို့ရာတွင် ID ရှာရလွယ်စေရန် Format ညှိထားပါသည်
+    bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်!**\nItem: `{item}`\nUser: {message.from_user.first_name}\nID: {cid}")
 
 @bot.message_handler(func=lambda m: m.text == "❌ ဝယ်ယူမှုကို ဖျက်သိမ်းမည် (Cancel)")
 def handle_cancel(message):
     cid = message.chat.id
+    save_user(cid)
     if cid in order_times and (int(time.time()) - order_times[cid]) <= 180:
         bot.send_message(cid, "❌ ဝယ်ယူမှုကို ဖျက်သိမ်းလိုက်ပါပြီ။", reply_markup=main_menu())
-        bot.send_message(ADMIN_ID, f"🚫 **Order Cancel ဖြစ်သွားသည်**\nID: `{cid}`")
+        bot.send_message(ADMIN_ID, f"🚫 **Order Cancel ဖြစ်သွားသည်**\nID: {cid}")
     else:
         bot.send_message(cid, "⚠️ ၃ မိနစ်ကျော်သွားပြီဖြစ်၍ Cancel လုပ်၍မရတော့ပါ။ Admin ကို ပြောပေးပါ။", reply_markup=main_menu())
 
-# --- Media Forwarding ---
+# --- Media Forwarding & Admin Reply ---
 
 @bot.message_handler(content_types=['text', 'photo', 'document', 'audio', 'voice', 'video'])
 def handle_media(message):
     if message.chat.id != ADMIN_ID:
         save_user(message.chat.id)
         info = f"📩 **Message အသစ်!**\n👤 {message.from_user.first_name}\n🆔 ID: {message.chat.id}"
+        
         if message.content_type == 'text':
             bot.send_message(ADMIN_ID, f"{info}\n📝 {message.text}")
         elif message.content_type == 'photo':
@@ -204,17 +219,23 @@ def handle_media(message):
         elif message.content_type == 'document':
             bot.send_document(ADMIN_ID, message.document.file_id, caption=f"{info}\n📄 {message.caption or ''}")
         
+        # ပထမတစ်ကြိမ်ပဲ reply ပြန်မည်
         if message.chat.id not in notified_users:
             bot.reply_to(message, "✅ စာကို Admin ထံ ပေးပို့လိုက်ပါပြီ။")
             notified_users.add(message.chat.id)
             
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
-            target_id = int(re.findall(r"ID: (\d+)", message.reply_to_message.caption or message.reply_to_message.text)[0])
-            bot.send_message(target_id, f"👨‍💻 **Admin ပြန်စာ:**\n\n{message.text}")
-            bot.send_message(ADMIN_ID, "✅ ပို့ပြီးပါပြီ။")
-        except:
-            bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပါ။")
+            # Regex ဖြင့် ID ကို ရှာပါသည်
+            find_id = re.findall(r"ID: (\d+)", message.reply_to_message.text or message.reply_to_message.caption)
+            if find_id:
+                target_id = int(find_id[0])
+                bot.send_message(target_id, f"👨‍💻 **Admin ပြန်စာ:**\n\n{message.text}")
+                bot.send_message(ADMIN_ID, "✅ ပို့ပြီးပါပြီ။")
+            else:
+                bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပါ။")
+        except Exception as e:
+            bot.send_message(ADMIN_ID, f"❌ Error: {str(e)}")
 
 if __name__ == "__main__":
     recover_old_ids()
@@ -222,4 +243,4 @@ if __name__ == "__main__":
     bot.remove_webhook()
     time.sleep(1)
     bot.infinity_polling(timeout=30, long_polling_timeout=15)
-            
+    
