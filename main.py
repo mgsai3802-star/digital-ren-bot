@@ -52,19 +52,20 @@ def main_menu():
     markup.add(*(telebot.types.KeyboardButton(text) for text in btns))
     return markup
 
-# --- 1. Callback Handler (အသေချာဆုံး ဖြေရှင်းချက်) ---
+# --- 1. Callback Handler (ဝယ်ယူမည် နှိပ်လျှင် အလုပ်လုပ်မည့် အဓိက Logic) ---
 @bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
+def callback_inline(call):
+    # Loading Circle ပျောက်စေရန် answer ပို့ရပါမည်
     bot.answer_callback_query(call.id)
     
-    if call.data.startswith('b_'):
-        plan = call.data.replace("b_", "")
-        curr_time = int(time.time())
+    if call.data.startswith('buy_'):
+        plan_code = call.data.replace("buy_", "")
+        current_time = int(time.time())
         
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("❌ မဝယ်တော့ပါ (Cancel)", callback_data=f"c_{plan}_{curr_time}"))
+        markup.add(InlineKeyboardButton("❌ မဝယ်တော့ပါ (Cancel)", callback_data=f"can_{plan_code}_{current_time}"))
         
-        pay_msg = (
+        payment_info = (
             "✅ လူကြီးမင်း၏ ဝယ်ယူမှုကို လက်ခံရရှိပါပြီခင်ဗျာ။\n\n"
             "ကျွန်ုပ်တို့ဘက်မှ လုပ်ဆောင်နေပါသည်၊၊ **Admin လိုင်းတက်စာပြန်မှ ငွေလွှဲပေးတာ ပိုပြီးအဆင်ပြေပါတယ်ဗျ။**\n\n"
             "လွှဲရန် အဆင်ပြေသည့်အချိန်တွင် အောက်ပါအကောင့်သို့ လွှဲပေးနိုင်ပါသည်ခင်ဗျာ။\n\n"
@@ -79,20 +80,31 @@ def callback_query(call):
         )
         
         try:
-            bot.edit_message_text(pay_msg, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-            bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan}`\nUser: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
-        except:
-            pass
+            # စာသားကို အသစ်တစ်ခုအနေနဲ့ မပို့ဘဲ လက်ရှိစာသားပေါ်မှာပဲ Update လုပ်ပါမည်
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                text=payment_info,
+                reply_markup=markup,
+                parse_mode="Markdown"
+            )
+            # Admin ဆီသို့ Order Notification ပို့ခြင်း
+            bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan_code}`\nUser: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
+        except Exception as e:
+            print(f"Edit Error: {e}")
 
-    elif call.data.startswith('c_'):
-        parts = call.data.split('_')
-        if int(time.time()) - int(parts[2]) > 180:
+    elif call.data.startswith('can_'):
+        data_parts = call.data.split('_')
+        plan_code = data_parts[1]
+        order_time = int(data_parts[2])
+        
+        if int(time.time()) - order_time > 180:
             bot.answer_callback_query(call.id, "❌ ၃ မိနစ်ကျော်သွားပြီဖြစ်၍ Cancel လုပ်၍မရတော့ပါ။", show_alert=True)
         else:
             bot.edit_message_text("❌ ဝယ်ယူမှုကို ဖျက်သိမ်းလိုက်ပါပြီခင်ဗျာ။", call.message.chat.id, call.message.message_id)
-            bot.send_message(ADMIN_ID, f"🚫 **Order Cancel ဖြစ်သွားပါသည်**\n\nPlan: `{parts[1]}`\nUser: @{call.from_user.username}", parse_mode="Markdown")
+            bot.send_message(ADMIN_ID, f"🚫 **Order Cancel ဖြစ်သွားပါသည်**\n\nPlan: `{plan_code}`\nUser: @{call.from_user.username}", parse_mode="Markdown")
 
-# --- 2. Services Pricing (စာသားများ အကုန်ပြန်ညှိထားပါသည်) ---
+# --- 2. Pricing & Services Handlers ---
 @bot.message_handler(func=lambda m: m.text in [
     "💎 Telegram Premium", "🌐 VPN ဝန်ဆောင်မှု", "🤖 AI Premium Tools", 
     "🎬 Music & Entertainment", "🎬 CapCut Pro Premium", "🌟 အခြားပရီမီယံများ", 
@@ -100,84 +112,128 @@ def callback_query(call):
 ])
 def services_pricing(message):
     save_user(message.chat.id)
-    t = message.text
-    cid = message.chat.id
+    text = message.text
+    chat_id = message.chat.id
 
-    if t == "💎 Telegram Premium":
-        msg = ("💎 **Telegram Premium Pricing**\n━━━━━━━━━━━━━━━━━━\n"
-               "🔹 3 Months  ➔  53,000 MMK\n🔹 6 Months  ➔  75,000 MMK\n🔹 1 Year    ➔  130,000 MMK\n"
-               "━━━━━━━━━━━━━━━━━━\n💡 Gift အနေနဲ့ တိုက်ရိုက်ပို့ဆောင်ပေးမှာပါ။")
+    if text == "💎 Telegram Premium":
+        msg = ("💎 **Telegram Premium Pricing**\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "🔹 3 Months  ➔  53,000 MMK\n"
+               "🔹 6 Months  ➔  75,000 MMK\n"
+               "🔹 1 Year    ➔  130,000 MMK\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "💡 Gift အနေနဲ့ တိုက်ရိုက်ပို့ဆောင်ပေးမှာပါ။")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🔹 3 Months ဝယ်မည်", callback_data="b_tg3"),
-                   InlineKeyboardButton("🔹 6 Months ဝယ်မည်", callback_data="b_tg6"))
-        markup.row(InlineKeyboardButton("🔹 1 Year ဝယ်မည်", callback_data="b_tg1y"))
-        bot.send_message(cid, msg, reply_markup=markup, parse_mode="Markdown")
+        markup.row(InlineKeyboardButton("🔹 3 Months ဝယ်မည်", callback_data="buy_tg3"),
+                   InlineKeyboardButton("🔹 6 Months ဝယ်မည်", callback_data="buy_tg6"))
+        markup.row(InlineKeyboardButton("🔹 1 Year ဝယ်မည်", callback_data="buy_tg1y"))
+        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
-    elif t == "🌐 VPN ဝန်ဆောင်မှု":
-        msg = ("🌐 **VPN Service Pricing**\n━━━━━━━━━━━━━━━━━━\n"
-               "🚀 Express VPN (1 Month) ➔ 4,000 Ks\n🐢 HMA VPN (1 Month)     ➔ 10,000 Ks\n\n"
-               "📡 **NPV Tunnel (1 Month)**\n• 50 GB Plan  ➔  5,000 Ks\n• 100 GB Plan ➔  10,000 Ks\n━━━━━━━━━━━━━━━━━━")
+    elif text == "🌐 VPN ဝန်ဆောင်မှု":
+        msg = ("🌐 **VPN Service Pricing**\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "🚀 Express VPN (1 Month) ➔ 4,000 Ks\n"
+               "🐢 HMA VPN (1 Month)     ➔ 10,000 Ks\n\n"
+               "📡 **NPV Tunnel (1 Month)**\n"
+               "• 50 GB Plan  ➔  5,000 Ks\n"
+               "• 100 GB Plan ➔  10,000 Ks\n"
+               "━━━━━━━━━━━━━━━━━━")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🚀 Express ဝယ်မည်", callback_data="b_vexp"), 
-                   InlineKeyboardButton("🐢 HMA ဝယ်မည်", callback_data="b_vhma"))
-        markup.row(InlineKeyboardButton("📡 NPV 50GB ဝယ်မည်", callback_data="b_v50"), 
-                   InlineKeyboardButton("📡 NPV 100GB ဝယ်မည်", callback_data="b_v100"))
-        bot.send_message(cid, msg, reply_markup=markup, parse_mode="Markdown")
+        markup.row(InlineKeyboardButton("🚀 Express ဝယ်မည်", callback_data="buy_vexp"), 
+                   InlineKeyboardButton("🐢 HMA ဝယ်မည်", callback_data="buy_vhma"))
+        markup.row(InlineKeyboardButton("📡 NPV 50GB ဝယ်မည်", callback_data="buy_v50"), 
+                   InlineKeyboardButton("📡 NPV 100GB ဝယ်မည်", callback_data="buy_v100"))
+        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
-    elif t == "🤖 AI Premium Tools":
-        msg = ("🤖 **AI Premium Tools**\n━━━━━━━━━━━━━━━━━━\n"
-               "✨ Gemini AI (4 Months)    ➔  7,000 Ks\n✨ Gemini AI 5TB (1 Year)  ➔  40,000 Ks\n\n"
-               "💬 ChatGPT (1 Month)       ➔  8,000 Ks\n💼 ChatGPT Business\n"
-               "• Invite to mail     ➔  10,000 Ks\n• Own Acc (5 Inv)  ➔  20,000 Ks\n\n"
-               "🔍 Perplexity Pro AI (1 Month) ➔  8,000 Ks\n🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks\n❌ Chat GPT မရသေးပါ")
+    elif text == "🤖 AI Premium Tools":
+        msg = ("🤖 **AI Premium Tools**\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "✨ Gemini AI (4 Months)    ➔  7,000 Ks\n"
+               "✨ Gemini AI 5TB (1 Year)  ➔  40,000 Ks\n\n"
+               "💬 ChatGPT (1 Month)       ➔  8,000 Ks\n"
+               "💼 ChatGPT Business\n"
+               "• Invite to mail     ➔  10,000 Ks\n"
+               "• Own Acc (5 Inv)  ➔  20,000 Ks\n\n"
+               "🔍 Perplexity Pro AI (1 Month) ➔  8,000 Ks\n"
+               "🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks\n"
+               "❌ Chat GPT မရသေးပါ")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("✨ Gemini ဝယ်မည်", callback_data="b_agem"), 
-                   InlineKeyboardButton("💬 ChatGPT ဝယ်မည်", callback_data="b_agpt"))
-        markup.row(InlineKeyboardButton("🔍 Perplexity ဝယ်မည်", callback_data="b_appx"), 
-                   InlineKeyboardButton("🎨 AI Fiesta ဝယ်မည်", callback_data="b_afie"))
-        bot.send_message(cid, msg, reply_markup=markup, parse_mode="Markdown")
+        markup.row(InlineKeyboardButton("✨ Gemini ဝယ်မည်", callback_data="buy_agem"), 
+                   InlineKeyboardButton("💬 ChatGPT ဝယ်မည်", callback_data="buy_agpt"))
+        markup.row(InlineKeyboardButton("🔍 Perplexity ဝယ်မည်", callback_data="buy_appx"), 
+                   InlineKeyboardButton("🎨 AI Fiesta ဝယ်မည်", callback_data="buy_afie"))
+        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
-    elif t == "🎬 Music & Entertainment":
-        msg = ("🎬 **Music & Entertainment**\n━━━━━━━━━━━━━━━━━━\n"
-               "🎵 **Spotify Family Invite**\n• 1 Month   ➔  11,000 Ks\n• 2 Months  ➔  17,000 Ks\n• 3 Months  ➔  23,000 Ks\n\n"
-               "🎧 **Spotify Individual Acc**\n• 1 Month   ➔  15,000 Ks\n• 3 Months  ➔  37,000 Ks\n\n"
-               "🌊 Tidal Music (1 Month)   ➔  3,000 Ks\n🎼 Deezer Music (1 Month)  ➔  4,000 Ks")
+    elif text == "🎬 Music & Entertainment":
+        msg = ("🎬 **Music & Entertainment**\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "🎵 **Spotify Family Invite**\n"
+               "• 1 Month   ➔  11,000 Ks\n"
+               "• 2 Months  ➔  17,000 Ks\n"
+               "• 3 Months  ➔  23,000 Ks\n\n"
+               "🎧 **Spotify Individual Acc**\n"
+               "• 1 Month   ➔  15,000 Ks\n"
+               "• 3 Months  ➔  37,000 Ks\n\n"
+               "🌊 Tidal Music (1 Month)   ➔  3,000 Ks\n"
+               "🎼 Deezer Music (1 Month)  ➔  4,000 Ks")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🎵 Spotify ဝယ်မည်", callback_data="b_mspo"))
-        markup.row(InlineKeyboardButton("🌊 Tidal ဝယ်မည်", callback_data="b_mtid"), 
-                   InlineKeyboardButton("🎼 Deezer ဝယ်မည်", callback_data="b_mdee"))
-        bot.send_message(cid, msg, reply_markup=markup, parse_mode="Markdown")
+        markup.row(InlineKeyboardButton("🎵 Spotify ဝယ်မည်", callback_data="buy_mspo"))
+        markup.row(InlineKeyboardButton("🌊 Tidal ဝယ်မည်", callback_data="buy_mtid"), 
+                   InlineKeyboardButton("🎼 Deezer ဝယ်မည်", callback_data="buy_mdee"))
+        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
-    elif t == "🎬 CapCut Pro Premium":
-        msg = ("🎬 **CapCut Pro Premium**\n━━━━━━━━━━━━━━━━━━\n"
-               "📌 **1 Month Plan**\n• Share Account   ➔  9,000 Ks\n• Private Mail    ➔  14,000 Ks\n• Own Mail        ➔  16,000 Ks\n\n"
-               "📌 **6 Month Plan**\n• Private Mail    ➔  45,000 Ks\n• Own Mail        ➔  54,000 Ks\n\n"
-               "📌 **1 Year Plan**\n• Private Mail    ➔  74,000 Ks\n• Own Mail        ➔  84,000 Ks\n━━━━━━━━━━━━━━━━━━\n✨ 4K Export, No Watermark!")
+    elif text == "🎬 CapCut Pro Premium":
+        msg = ("🎬 **CapCut Pro Premium**\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "📌 **1 Month Plan**\n"
+               "• Share Account   ➔  9,000 Ks\n"
+               "• Private Mail    ➔  14,000 Ks\n"
+               "• Own Mail        ➔  16,000 Ks\n\n"
+               "📌 **6 Month Plan**\n"
+               "• Private Mail    ➔  45,000 Ks\n"
+               "• Own Mail        ➔  54,000 Ks\n\n"
+               "📌 **1 Year Plan**\n"
+               "• Private Mail    ➔  74,000 Ks\n"
+               "• Own Mail        ➔  84,000 Ks\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "✨ 4K Export, No Watermark!")
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="b_ccut"))
-        bot.send_message(cid, msg, reply_markup=markup, parse_mode="Markdown")
+        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="buy_ccut"))
+        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
-    elif t == "🌟 အခြားပရီမီယံများ":
-        msg = ("🌟 **Other Premium Services**\n━━━━━━━━━━━━━━━━━━\n"
-               "🖼️ Canva Edu (1 Year)      ➔  5,000 Ks\n📸 PicsArt Pro (1 Month)   ➔  5,000 Ks\n"
-               "📹 Zoom License (14 Days)  ➔  6,000 Ks\n📹 Zoom License (28 Days)  ➔  11,000 Ks\n"
+    elif text == "🌟 အခြားပရီမီယံများ":
+        msg = ("🌟 **Other Premium Services**\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "🖼️ Canva Edu (1 Year)      ➔  5,000 Ks\n"
+               "📸 PicsArt Pro (1 Month)   ➔  5,000 Ks\n"
+               "📹 Zoom License (14 Days)  ➔  6,000 Ks\n"
+               "📹 Zoom License (28 Days)  ➔  11,000 Ks\n"
                "📚 Gregmat+ (1 Month)      ➔  10,000 Ks")
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="b_oth"))
-        bot.send_message(cid, msg, reply_markup=markup, parse_mode="Markdown")
+        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="buy_oth"))
+        bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
-    elif t == "🛡️ Hotspot Shield Free":
-        msg = ("🛡️ **Hotspot Shield VPN (7 Days Free)**\n━━━━━━━━━━━━━━━━━━\n📧 **Accounts List:**\n"
-               "• `waterfestival@gmail.com` \n• `w.aterfestival@gmail.com` \n• `wa.terfestival@gmail.com` \n"
-               "• `wat.erfestival@gmail.com` \n• `wate.rfestival@gmail.com` \n\n"
-               "🔑 **Password** ➔ `Saithet111@222` \n📌 (အကောင့်တစ်ခုကို 10 devices သုံးရ)")
-        bot.send_message(cid, msg, parse_mode="Markdown")
+    elif text == "🛡️ Hotspot Shield Free":
+        msg = ("🛡️ **Hotspot Shield VPN (7 Days Free)**\n"
+               "━━━━━━━━━━━━━━━━━━\n"
+               "📧 **Accounts List:**\n"
+               "• `waterfestival@gmail.com` \n"
+               "• `w.aterfestival@gmail.com` \n"
+               "• `wa.terfestival@gmail.com` \n"
+               "• `wat.erfestival@gmail.com` \n"
+               "• `wate.rfestival@gmail.com` \n\n"
+               "🔑 **Password** ➔ `Saithet111@222` \n"
+               "📌 (အကောင့်တစ်ခုကို 10 devices သုံးရ)")
+        bot.send_message(chat_id, msg, parse_mode="Markdown")
 
-    elif t == "👨‍💻 Admin နှင့် စကားပြောရန် သို့မဟုတ် Channel Join ရန်":
-        msg = ("👨‍💻 **Admin နှင့် ဆက်သွယ်ရန်**\nAdmin (@Ren2512) ထံ တိုက်ရိုက်ဆက်သွယ်နိုင်သလို ဤ Bot ထဲတွင်လည်း စာရေးသားပေးပို့နိုင်ပါသည်။\n\n📢 **Channel Join ရန်**\n🔗 https://t.me/premiumren")
-        bot.send_message(cid, msg, parse_mode="Markdown")
+    elif text == "👨‍💻 Admin နှင့် စကားပြောရန် သို့မဟုတ် Channel Join ရန်":
+        msg = ("👨‍💻 **Admin နှင့် ဆက်သွယ်ရန်**\n"
+               "Admin (@Ren2512) ထံ တိုက်ရိုက်ဆက်သွယ်နိုင်သလို ဤ Bot ထဲတွင်လည်း စာရေးသားပေးပို့နိုင်ပါသည်။\n\n"
+               "📢 **Channel Join ရန်**\n"
+               "🔗 https://t.me/premiumren")
+        bot.send_message(chat_id, msg, parse_mode="Markdown")
 
-# --- 3. Start Command ---
+# --- 3. Start & System ---
 @bot.message_handler(commands=['start'])
 def start(message):
     save_user(message.chat.id)
@@ -187,7 +243,6 @@ def start(message):
                     "လိုအပ်တဲ့ ပရီမီယံများအတွက် အောက်က Menu ကိုနှိပ်၍ ကြည့်ရှုနိုင်ပါတယ်ခင်ဗျာ။")
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- 4. Admin & Forward System ---
 @bot.message_handler(content_types=['text', 'photo', 'document', 'audio', 'voice', 'video'])
 def handle_all_media(message):
     if message.chat.id != ADMIN_ID:
@@ -213,4 +268,4 @@ if __name__ == "__main__":
     Thread(target=run_flask).start()
     bot.remove_webhook()
     time.sleep(1)
-    bot.infinity_polling(timeout=20, long_polling_timeout=10)
+    bot.infinity_polling(timeout=30, long_polling_timeout=15)
