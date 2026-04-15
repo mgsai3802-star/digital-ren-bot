@@ -49,7 +49,7 @@ def main_menu():
 
 def tg_menu():
     markup = telebot.types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    markup.add("🛒 TG 3 Months - 53,000", "🛒 TG 6 Months - 75,000", "🛒 TG 1 Year - 130,000", "🔙 Back")
+    markup.add("🛒 TG 3 Months", "🛒 TG 6 Months", "🛒 TG 1 Year", "🔙 Back")
     return markup
 
 def vpn_menu():
@@ -72,10 +72,25 @@ def capcut_menu():
     markup.add("🛒 CapCut 1 Month", "🛒 CapCut 1 Year", "🔙 Back")
     return markup
 
+def others_menu():
+    markup = telebot.types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    markup.add("🛒 Canva Edu", "🛒 PicsArt Pro", "🛒 Zoom License", "🔙 Back")
+    return markup
+
 def cancel_menu():
     markup = telebot.types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
     markup.add("❌ ဝယ်ယူမှုကို ဖျက်သိမ်းမည် (Cancel)", "🔙 Main Menu")
     return markup
+
+# --- Start Command ---
+@bot.message_handler(commands=['start'])
+def start(message):
+    save_user(message.chat.id)
+    user_name = message.from_user.first_name
+    welcome_text = (f"မင်္ဂလာပါ **{user_name}** ခင်ဗျာ။ 🙏\n"
+                    "**Ren Digital Service** မှ ကြိုဆိုပါတယ်ခင်ဗျ။\n\n"
+                    "လိုအပ်တဲ့ ပရီမီယံများအတွက် အောက်က Menu ကိုနှိပ်၍ ကြည့်ရှုနိုင်ပါတယ်ခင်ဗျာ။")
+    bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
 # --- Services Handlers ---
 
@@ -100,13 +115,19 @@ def show_pricing(message):
     elif t == "🎬 CapCut Pro Premium":
         msg = ("🎬 **CapCut Pro Premium**\n━━━━━━━━━━━━━━━━━━\n📌 **1 Month Plan**\n• Share Account   ➔  9,000 Ks\n• Own Mail        ➔  16,000 Ks\n\n📌 **1 Year Plan**\n• Own Mail        ➔  84,000 Ks\n━━━━━━━━━━━━━━━━━━\n✨ 4K Export, No Watermark!")
         bot.send_message(cid, msg, reply_markup=capcut_menu(), parse_mode="Markdown")
+    elif t == "🌟 အခြားပရီမီယံများ":
+        msg = ("🌟 **Other Premium Services**\n━━━━━━━━━━━━━━━━━━\n🖼️ Canva Edu (1 Year)      ➔  5,000 Ks\n📸 PicsArt Pro (1 Month)   ➔  5,000 Ks\n📹 Zoom License (28 Days)  ➔  11,000 Ks\n📚 Gregmat+ (1 Month)      ➔  10,000 Ks")
+        bot.send_message(cid, msg, reply_markup=others_menu(), parse_mode="Markdown")
     elif t == "🛡️ Hotspot Shield Free":
         msg = ("🛡️ **Hotspot Shield VPN (7 Days Free)**\n━━━━━━━━━━━━━━━━━━\n📧 **Accounts List:**\n• `waterfestival@gmail.com` \n• `w.aterfestival@gmail.com` \n• `wa.terfestival@gmail.com` \n• `wat.erfestival@gmail.com` \n• `wate.rfestival@gmail.com` \n\n🔑 **Password** ➔ `Saithet111@222` \n📌 (အကောင့်တစ်ခုကို 10 devices သုံးရ)")
         bot.send_message(cid, msg, parse_mode="Markdown")
     elif t in ["🔙 Back", "🔙 Main Menu"]:
         bot.send_message(cid, "မူလ Menu သို့ ပြန်ရောက်ပါပြီ။", reply_markup=main_menu())
+    elif t == "👨‍💻 Admin နှင့် ဆက်သွယ်ရန်":
+        msg = ("👨‍💻 **Admin နှင့် ဆက်သွယ်ရန်**\nAdmin (@Ren2512) ထံ တိုက်ရိုက်ဆက်သွယ်နိုင်ပါသည်။\n\n📢 **Channel Join ရန်**\n🔗 https://t.me/premiumren")
+        bot.send_message(cid, msg, parse_mode="Markdown")
 
-# --- Purchase Handler (ဝယ်ယူမည် နှိပ်လိုက်သောအခါ) ---
+# --- Purchase Handler ---
 
 @bot.message_handler(func=lambda m: m.text.startswith("🛒"))
 def handle_buy(message):
@@ -138,12 +159,7 @@ def handle_cancel(message):
     else:
         bot.send_message(cid, "⚠️ ၃ မိနစ်ကျော်သွားပြီဖြစ်၍ Cancel လုပ်၍မရတော့ပါ။ Admin ကို ပြောပေးပါ။", reply_markup=main_menu())
 
-# --- System & Forwarding ---
-
-@bot.message_handler(commands=['start'])
-def start(message):
-    save_user(message.chat.id)
-    bot.send_message(message.chat.id, f"မင်္ဂလာပါ **{message.from_user.first_name}** ခင်ဗျာ။ 🙏\nRen Digital Service မှ ကြိုဆိုပါတယ်၊၊", reply_markup=main_menu(), parse_mode="Markdown")
+# --- Media Forwarding ---
 
 @bot.message_handler(content_types=['text', 'photo', 'document', 'audio', 'voice', 'video'])
 def handle_media(message):
@@ -168,3 +184,4 @@ if __name__ == "__main__":
     bot.remove_webhook()
     time.sleep(1)
     bot.infinity_polling(timeout=30, long_polling_timeout=15)
+                                               
