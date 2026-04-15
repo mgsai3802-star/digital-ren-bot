@@ -121,7 +121,8 @@ def services_pricing(message):
                "🌊 Tidal Music (1 Month)   ➔  3,000 Ks\n"
                "🎼 Deezer Music (1 Month)  ➔  4,000 Ks")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🎵 Spotify ဝယ်မည်", callback_data="buy_music_spotify"), InlineKeyboardButton("🌊 Tidal/Deezer ဝယ်မည်", callback_data="buy_music_tidal"))
+        markup.row(InlineKeyboardButton("🎵 Spotify ဝယ်မည်", callback_data="buy_music_spotify"))
+        markup.row(InlineKeyboardButton("🌊 Tidal ဝယ်မည်", callback_data="buy_music_tidal"), InlineKeyboardButton("🎼 Deezer ဝယ်မည်", callback_data="buy_music_deezer"))
         bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
     elif text == "🎬 CapCut Pro Premium":
@@ -175,14 +176,13 @@ def services_pricing(message):
                "🔗 https://t.me/premiumren")
         bot.send_message(chat_id, msg, parse_mode="Markdown")
 
-# --- Callback Query Handler (ဝယ်မယ်နှိပ်ရင် ဆက်သွားရန် ပြင်ဆင်ချက်) ---
+# --- Callback Query Handler ---
 @bot.callback_query_handler(func=lambda call: True)
-def callback_handler(call):
+def callback_query(call):
     if call.data.startswith('buy_'):
         plan_code = call.data.replace("buy_", "")
         current_time = int(time.time())
         
-        # Cancel Button ပါဝင်သော Inline Keyboard
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("❌ မဝယ်တော့ပါ (Cancel)", callback_data=f"cancel_{plan_code}_{current_time}"))
         
@@ -200,17 +200,18 @@ def callback_handler(call):
             "📌 *မှတ်ချက် - ဝယ်ယူမှုကို ဖျက်သိမ်းလိုပါက ၃ မိနစ်အတွင်းသာ Cancel နှိပ်ခွင့်ရှိပါသည်။*"
         )
         
-        bot.edit_message_text(payment_info, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-        
-        # Admin ဆီသို့ Notification ပို့ခြင်း
-        bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan_code}`\nဝယ်ယူသူ: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
+        # Message ကို Update လုပ်ရန် (ဒီနေရာမှာ edit_message_text ကို သုံးမှ Button တွေ ပျောက်ပြီး စာသားအသစ်ပေါ်မှာပါ)
+        try:
+            bot.edit_message_text(payment_info, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+            bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan_code}`\nဝယ်ယူသူ: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
+        except:
+            pass
 
     elif call.data.startswith('cancel_'):
         data_parts = call.data.split('_')
         plan_code = data_parts[1]
         order_time = int(data_parts[2])
         
-        # ၃ မိနစ် (၁၈၀ စက္ကန့်) စစ်ဆေးခြင်း
         if int(time.time()) - order_time > 180:
             bot.answer_callback_query(call.id, "❌ ၃ မိနစ်ကျော်သွားပြီဖြစ်၍ Cancel လုပ်၍မရတော့ပါ။ Admin ကို တိုက်ရိုက်ပြောပေးပါခင်ဗျာ။", show_alert=True)
         else:
@@ -293,4 +294,4 @@ if __name__ == "__main__":
     Thread(target=run_flask).start()
     bot.remove_webhook()
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
-    
+            
