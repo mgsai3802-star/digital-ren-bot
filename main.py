@@ -52,17 +52,14 @@ def main_menu():
     markup.add(*(telebot.types.KeyboardButton(text) for text in btns))
     return markup
 
-# --- 1. Callback Handler (အလုပ်ဖြစ်မည့် နည်းလမ်းသစ်) ---
+# --- 1. Callback Handler (ခလုတ်နှိပ်ရင် အလုပ်လုပ်မည့်အပိုင်း) ---
 @bot.callback_query_handler(func=lambda call: True)
-def callback_handler(call):
+def callback_listener(call):
+    # ခလုတ်နှိပ်လိုက်ရင် ဝိုင်းဝိုင်းလည်မနေအောင် answer အရင်ပို့ရပါမယ်
     bot.answer_callback_query(call.id)
     
-    if call.data.startswith('b_'):
-        plan = call.data.replace("b_", "")
-        current_time = int(time.time())
-        
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("❌ မဝယ်တော့ပါ (Cancel)", callback_data=f"c_{plan}_{current_time}"))
+    if call.data.startswith('buy_'):
+        plan_name = call.data.replace("buy_", "")
         
         payment_info = (
             "✅ လူကြီးမင်း၏ ဝယ်ယူမှုကို လက်ခံရရှိပါပြီခင်ဗျာ။\n\n"
@@ -74,24 +71,19 @@ def callback_handler(call):
             "📱 Wave: `09776319707`\n"
             "👤 Name: **Sai Thet Thu Aung**\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "⚠️ ငွေလွှဲပြီးပါက Screenshot ပို့ပေးရန် မေတ္တာရပ်ခံအပ်ပါသည်။\n\n"
-            "📌 *မှတ်ချက် - ဝယ်ယူမှုကို ဖျက်သိမ်းလိုပါက ၃ မိနစ်အတွင်းသာ Cancel နှိပ်ခွင့်ရှိပါသည်။*"
+            "⚠️ ငွေလွှဲပြီးပါက Screenshot ပို့ပေးရန် မေတ္တာရပ်ခံအပ်ပါသည်။"
         )
         
-        # Message ကို Update လုပ်ခြင်း
-        try:
-            bot.edit_message_text(payment_info, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="Markdown")
-            bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan}`\nဝယ်ယူသူ: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
-        except:
-            pass
-
-    elif call.data.startswith('c_'):
-        parts = call.data.split('_')
-        if int(time.time()) - int(parts[2]) > 180:
-            bot.answer_callback_query(call.id, "❌ ၃ မိနစ်ကျော်သွားပြီဖြစ်၍ Cancel လုပ်၍မရတော့ပါ။", show_alert=True)
-        else:
-            bot.edit_message_text("❌ ဝယ်ယူမှုကို ဖျက်သိမ်းလိုက်ပါပြီခင်ဗျာ။", call.message.chat.id, call.message.message_id)
-            bot.send_message(ADMIN_ID, f"🚫 **Order Cancel ဖြစ်သွားပါသည်**\n\nPlan: `{parts[1]}`\nဝယ်ယူသူ: @{call.from_user.username}", parse_mode="Markdown")
+        # Message ကို Update လုပ်ပြီး Payment အချက်အလက်ပြပါမယ်
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=payment_info,
+            parse_mode="Markdown"
+        )
+        
+        # Admin ဆီသို့ Notification ပို့ခြင်း
+        bot.send_message(ADMIN_ID, f"⚠️ **Order အသစ်တက်လာပါပြီ**\n\nPlan: `{plan_name}`\nဝယ်ယူသူ: @{call.from_user.username}\nID: `ID: {call.from_user.id}`", parse_mode="Markdown")
 
 # --- 2. Pricing Handlers (စာသားများ အညီညာဆုံး ပြန်ညှိထားပါသည်) ---
 @bot.message_handler(func=lambda m: m.text in [
@@ -113,9 +105,9 @@ def services_pricing(message):
                "━━━━━━━━━━━━━━━━━━\n"
                "💡 Gift အနေနဲ့ တိုက်ရိုက်ပို့ဆောင်ပေးမှာပါ။")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🔹 3 Months ဝယ်မည်", callback_data="b_tg3"),
-                   InlineKeyboardButton("🔹 6 Months ဝယ်မည်", callback_data="b_tg6"))
-        markup.row(InlineKeyboardButton("🔹 1 Year ဝယ်မည်", callback_data="b_tg1y"))
+        markup.row(InlineKeyboardButton("🔹 3 Months ဝယ်မည်", callback_data="buy_tg3m"),
+                   InlineKeyboardButton("🔹 6 Months ဝယ်မည်", callback_data="buy_tg6m"))
+        markup.row(InlineKeyboardButton("🔹 1 Year ဝယ်မည်", callback_data="buy_tg1y"))
         bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
     elif text == "🌐 VPN ဝန်ဆောင်မှု":
@@ -128,10 +120,10 @@ def services_pricing(message):
                "• 100 GB Plan ➔  10,000 Ks\n"
                "━━━━━━━━━━━━━━━━━━")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🚀 Express ဝယ်မည်", callback_data="b_vexp"), 
-                   InlineKeyboardButton("🐢 HMA ဝယ်မည်", callback_data="b_vhma"))
-        markup.row(InlineKeyboardButton("📡 NPV 50GB ဝယ်မည်", callback_data="b_v50"), 
-                   InlineKeyboardButton("📡 NPV 100GB ဝယ်မည်", callback_data="b_v100"))
+        markup.row(InlineKeyboardButton("🚀 Express ဝယ်မည်", callback_data="buy_vexp"), 
+                   InlineKeyboardButton("🐢 HMA ဝယ်မည်", callback_data="buy_vhma"))
+        markup.row(InlineKeyboardButton("📡 NPV 50GB ဝယ်မည်", callback_data="buy_v50"), 
+                   InlineKeyboardButton("📡 NPV 100GB ဝယ်မည်", callback_data="buy_v100"))
         bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
     elif text == "🤖 AI Premium Tools":
@@ -147,10 +139,10 @@ def services_pricing(message):
                "🎨 AI Fiesta Premium (1 Month) ➔  12,000 Ks\n"
                "❌ Chat GPT မရသေးပါ")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("✨ Gemini ဝယ်မည်", callback_data="b_agem"), 
-                   InlineKeyboardButton("💬 ChatGPT ဝယ်မည်", callback_data="b_agpt"))
-        markup.row(InlineKeyboardButton("🔍 Perplexity ဝယ်မည်", callback_data="b_appx"), 
-                   InlineKeyboardButton("🎨 AI Fiesta ဝယ်မည်", callback_data="b_afie"))
+        markup.row(InlineKeyboardButton("✨ Gemini ဝယ်မည်", callback_data="buy_agem"), 
+                   InlineKeyboardButton("💬 ChatGPT ဝယ်မည်", callback_data="buy_agpt"))
+        markup.row(InlineKeyboardButton("🔍 Perplexity ဝယ်မည်", callback_data="buy_appx"), 
+                   InlineKeyboardButton("🎨 AI Fiesta ဝယ်မည်", callback_data="buy_afie"))
         bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
     elif text == "🎬 Music & Entertainment":
@@ -166,9 +158,9 @@ def services_pricing(message):
                "🌊 Tidal Music (1 Month)   ➔  3,000 Ks\n"
                "🎼 Deezer Music (1 Month)  ➔  4,000 Ks")
         markup = InlineKeyboardMarkup()
-        markup.row(InlineKeyboardButton("🎵 Spotify ဝယ်မည်", callback_data="b_mspo"))
-        markup.row(InlineKeyboardButton("🌊 Tidal ဝယ်မည်", callback_data="b_mtid"), 
-                   InlineKeyboardButton("🎼 Deezer ဝယ်မည်", callback_data="b_mdee"))
+        markup.row(InlineKeyboardButton("🎵 Spotify ဝယ်မည်", callback_data="buy_mspo"))
+        markup.row(InlineKeyboardButton("🌊 Tidal ဝယ်မည်", callback_data="buy_mtid"), 
+                   InlineKeyboardButton("🎼 Deezer ဝယ်မည်", callback_data="buy_mdee"))
         bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
     elif text == "🎬 CapCut Pro Premium":
@@ -187,7 +179,7 @@ def services_pricing(message):
                "━━━━━━━━━━━━━━━━━━\n"
                "✨ 4K Export, No Watermark!")
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="b_ccut"))
+        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="buy_ccut"))
         bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
     elif text == "🌟 အခြားပရီမီယံများ":
@@ -199,7 +191,7 @@ def services_pricing(message):
                "📹 Zoom License (28 Days)  ➔  11,000 Ks\n"
                "📚 Gregmat+ (1 Month)      ➔  10,000 Ks")
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="b_oth"))
+        markup.add(InlineKeyboardButton("✅ ဝယ်ယူမည်", callback_data="buy_oth"))
         bot.send_message(chat_id, msg, reply_markup=markup, parse_mode="Markdown")
 
     elif text == "🛡️ Hotspot Shield Free":
@@ -232,7 +224,7 @@ def start(message):
                     "လိုအပ်တဲ့ ပရီမီယံများအတွက် အောက်က Menu ကိုနှိပ်၍ ကြည့်ရှုနိုင်ပါတယ်ခင်ဗျာ။")
     bot.send_message(message.chat.id, welcome_text, reply_markup=main_menu(), parse_mode="Markdown")
 
-# --- 4. Forward & Admin System ---
+# --- 4. Admin & Forward System ---
 @bot.message_handler(content_types=['text', 'photo', 'document', 'audio', 'voice', 'video'])
 def handle_all_media(message):
     if message.chat.id != ADMIN_ID:
@@ -247,15 +239,17 @@ def handle_all_media(message):
             notified_users.add(message.chat.id)
     elif message.reply_to_message and message.chat.id == ADMIN_ID:
         try:
+            # ID ကို caption ထဲကနေ ရှာပြီး ပြန်စာပို့ခြင်း
             target_id = int(re.findall(r"ID: (\d+)", message.reply_to_message.caption or message.reply_to_message.text)[0])
             bot.send_message(target_id, f"👨‍💻 **Admin ပြန်စာ:**\n\n{message.text}", reply_markup=main_menu())
             bot.send_message(ADMIN_ID, "✅ ပို့ပြီးပါပြီ။")
         except:
-            bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။")
+            bot.send_message(ADMIN_ID, "❌ ID ရှာမတွေ့ပါ။ ID ပါသောစာကို Reply ထောက်ပါ။")
 
 if __name__ == "__main__":
     recover_old_ids()
     Thread(target=run_flask).start()
     bot.remove_webhook()
     time.sleep(1)
-    bot.infinity_polling(timeout=20, long_polling_timeout=10)
+    bot.infinity_polling(timeout=30, long_polling_timeout=15)
+        
